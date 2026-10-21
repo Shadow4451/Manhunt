@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chasse à l’homme</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#f6f6f8;--fg:#1c1c22;--card:#fff;--bd:#d9d9e0;--ac:#e5484d;--mut:#6b6b78}
+@media (prefers-color-scheme:dark){:root{--bg:#15151a;--fg:#ececf1;--card:#202028;--bd:#34343f;--mut:#9a9aa8}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+#app{max-width:640px;margin:0 auto;padding:16px}
+h1{margin:0 0 12px;font-size:24px}h2{margin:0 0 8px;font-size:17px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin:10px 0}
+label{display:block;font-size:13px;color:var(--mut);margin:6px 0}
+input,select{width:100%;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;margin-top:2px}
+button{padding:9px 14px;border:0;border-radius:8px;background:var(--ac);color:#fff;font:inherit;font-weight:600;cursor:pointer;margin:4px 4px 4px 0}
+button.s{background:var(--bd);color:var(--fg)}button.sm{padding:4px 8px;font-size:13px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.err{color:var(--ac)}.mut{color:var(--mut);font-size:13px}
+#banner{padding:10px;border-radius:10px;font-weight:700;text-align:center;margin:8px 0;display:none}
+.warn{background:var(--ac);color:#fff}.ok{background:#2f9e5b;color:#fff}
+#map{height:min(75vw,460px);border-radius:12px;border:1px solid var(--bd);z-index:0}
+.leaflet-tooltip{font-weight:600}
+.row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+.row b{flex:1;min-width:90px}
+.tag{font-size:12px;padding:2px 7px;border-radius:99px;background:var(--bd)}
+.h{background:#e5484d;color:#fff}.p{background:#2f9e5b;color:#fff}
+.code{font:700 22px ui-monospace,monospace;letter-spacing:3px}
+</style></head><body><div id="app"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ====== COLLE ICI TA CONFIGURATION FIREBASE ====== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCXr9ogmq-vXYBclYxYzKnHm91_HEgz3Wo",
+  authDomain: "manhunt-database.firebaseapp.com",
+  projectId: "manhunt-database",
+  storageBucket: "manhunt-database.firebasestorage.app",
+  messagingSenderId: "958488121814",
+  appId: "1:958488121814:web:5f89252018bfb26877d477",
+  measurementId: "G-KTYPQJ1B23"
+};
+
+/* ================================================= */
+const $=s=>document.querySelector(s),app=$('#app');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let db,uid,code,G=null,P={},unsubs=[],wid,lastSent=0,myPos=null,ping={idx:-1,snap:{},at:0},shown='',ending=false,tm,map,tile,layer,view='',bg=true,name='';
+try{name=localStorage.getItem('mh_name')||''}catch(e){}
+const D={pingMin:5,pingShow:60,diam:1000,endDiam:100,durMin:60,mode:'continuous',stepM:100,stepEvery:10,lat:'',lng:'',teamMode:'choose'};
+const cfg=()=>Object.assign({},D,(G&&G.cfg)||{});
+const T={hunter:'Chasseur',prey:'Chassé','':'Sans équipe'};
+
+function init(){
+  if(!FIREBASE_CONFIG.projectId){app.innerHTML='<h1>Configuration manquante</h1><p class="err">Colle ta configuration Firebase en haut du fichier index.html.</p>';return}
+  try{firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore()}catch(e){app.innerHTML='<p class="err">Erreur Firebase : '+esc(e.message)+'</p>';return}
+  try{uid=localStorage.getItem('mh_uid')}catch(e){}
+  if(!uid){uid=Math.random().toString(36).slice(2)+Date.now().toString(36);try{localStorage.setItem('mh_uid',uid)}catch(e){}}
+  home();
+}
+function home(err){
+  cleanup();
+  app.innerHTML=`<h1>🎯 Chasse à l’homme</h1>
+  <div class="card"><label>Ton pseudo<input id="nm" maxlength="20" value="${esc(name)}"></label></div>
+  <div class="card"><h2>Rejoindre une partie</h2><input id="cd" placeholder="Identifiant de partie" maxlength="8" style="text-transform:uppercase"><button id="jn">Rejoindre</button></div>
+  <div class="card"><h2>Organiser</h2><p class="mut">Tu seras l’admin : tu règles la zone, les pings et tu lances la partie.</p><button id="mk">Créer une partie</button></div>
+  <p class="err" id="er">${err||''}</p>`;
+  const nm=()=>{name=$('#nm').value.trim();if(!name){$('#er').textContent='Choisis un pseudo.';return false}try{localStorage.setItem('mh_name',name)}catch(e){}return true};
+  $('#jn').onclick=async()=>{if(!nm())return;const c=$('#cd').value.trim().toUpperCase();if(!c)return;
+    try{const s=await db.doc('games/'+c).get();if(!s.exists){$('#er').textContent='Partie introuvable.';return}enter(c)}catch(e){$('#er').textContent='Erreur : '+(e.message||e.code)}};
+  $('#mk').onclick=async()=>{if(!nm())return;const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<5;i++)c+=A[Math.floor(Math.random()*A.length)];
+    try{await db.doc('games/'+c).set({adminId:uid,status:'lobby',cfg:D,created:Date.now()});enter(c)}catch(e){$('#er').textContent='Création impossible : '+(e.message||e.code)}};
+}
+function cleanup(){unsubs.forEach(f=>f());unsubs=[];clearInterval(tm);if(wid!=null&&navigator.geolocation)navigator.geolocation.clearWatch(wid);wid=null;if(map){map.remove();map=null}G=null;P={};shown='';ending=false;ping={idx:-1,snap:{},at:0}}
+async function enter(c){
+  cleanup();code=c;
+  const pr=db.doc(`games/${c}/players/${uid}`);
+  try{const s=await pr.get();if(!s.exists)await pr.set({name,team:'',caught:false});else await pr.update({name})}catch(e){home('Erreur : '+(e.message||e.code));return}
+  unsubs.push(db.doc('games/'+c).onSnapshot(s=>{
+    if(!s.exists){home('Cette partie n’existe plus.');return}
+    G=s.data();const k=G.status+(G.adminId===uid);if(k!==shown){shown=k;build()}update();
+  }));
+  unsubs.push(db.collection(`games/${c}/players`).onSnapshot(q=>{P={};q.docs.forEach(d=>P[d.id]=d.data());plist();update()}));
+  startGeo();tm=setInterval(update,1000);
+}
+function startGeo(){
+  if(!navigator.geolocation)return;
+  wid=navigator.geolocation.watchPosition(p=>{
+    myPos={lat:p.coords.latitude,lng:p.coords.longitude};
+    const m=P[uid];if(!m||!m.team||Date.now()-lastSent<4000)return;lastSent=Date.now();
+    db.doc(`games/${code}/players/${uid}`).update({lat:myPos.lat,lng:myPos.lng,ts:Date.now()}).catch(()=>{});
+  },e=>{myPos=null},{enableHighAccuracy:true,maximumAge:2000});
+}
+const isAdmin=()=>G&&G.adminId===uid;
+function mkMap(){
+  if(map){map.remove();map=null}
+  map=L.map('map').setView([46.6,2.4],5);layer=L.layerGroup().addTo(map);
+  tile=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});if(bg)tile.addTo(map);view='';
+  if(isAdmin()&&G.status==='lobby')map.on('click',e=>{$('#c_lat').value=e.latlng.lat.toFixed(6);$('#c_lng').value=e.latlng.lng.toFixed(6)});
+}
+function build(){
+  const c=cfg(),adm=isAdmin(),lobby=G.status==='lobby';
+  let h=`<h1>🎯 Partie <span class="code">${esc(code)}</span></h1><div id="banner"></div><div class="card" id="info"></div><div id="map"></div>
+  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="bg" ${bg?'checked':''} style="width:auto;margin:0"> Fond de carte (OpenStreetMap)</label>`;
+  if(lobby&&adm)h+=`<div class="card"><h2>Réglages (admin)</h2><p class="mut">Astuce : touche la carte pour placer le centre de la zone.</p>
+    <div class="g2"><label>Ping chasseurs (min)<input id="c_pingMin" type="number" min="0.5" step="0.5" value="${c.pingMin}"></label>
+    <label>Durée de la partie (min)<input id="c_durMin" type="number" min="1" value="${c.durMin}"></label>
+    <label>Diamètre de départ (m)<input id="c_diam" type="number" min="50" value="${c.diam}"></label>
+    <label>Diamètre final (m)<input id="c_endDiam" type="number" min="10" value="${c.endDiam}"></label></div>
+    <label>Le ping reste affiché (secondes, 0 = jusqu’au prochain ping)<input id="c_pingShow" type="number" min="0" value="${c.pingShow}"></label>
+    <label>Réduction de la zone<select id="c_mode"><option value="continuous">Continue, sur toute la durée</option><option value="steps">Par paliers</option></select></label>
+    <div class="g2" id="stp"><label>Palier : réduction (m de diamètre)<input id="c_stepM" type="number" min="10" value="${c.stepM}"></label>
+    <label>Palier : toutes les (min)<input id="c_stepEvery" type="number" min="1" value="${c.stepEvery}"></label></div>
+    <div class="g2"><label>Centre : latitude<input id="c_lat" value="${c.lat}"></label><label>Centre : longitude<input id="c_lng" value="${c.lng}"></label></div>
+    <button class="s" id="here">📍 Centre = ma position</button>
+    <label>Équipes<select id="c_teamMode"><option value="choose">Chacun choisit</option><option value="admin">L’admin attribue</option></select></label>
+    <button id="sv">Enregistrer</button><span class="mut" id="svm"></span></div>`;
+  h+=`<div class="card" id="tm"></div><div class="card"><h2>Joueurs</h2><div id="pl"></div></div><div id="act"></div>`;
+  app.innerHTML=h;mkMap();
+  $('#bg').onchange=e=>{bg=e.target.checked;bg?tile.addTo(map):map.removeLayer(tile)};
+  if(lobby&&adm){
+    $('#c_mode').value=c.mode;$('#c_teamMode').value=c.teamMode;
+    const sw=()=>$('#stp').style.display=$('#c_mode').value==='steps'?'grid':'none';sw();$('#c_mode').onchange=sw;
+    $('#here').onclick=()=>{if(!myPos){$('#svm').textContent='Position indisponible (autorise la localisation).';return}$('#c_lat').value=myPos.lat.toFixed(6);$('#c_lng').value=myPos.lng.toFixed(6)};
+    $('#sv').onclick=async()=>{const n=k=>$('#c_'+k).value,f=k=>parseFloat(String(n(k)).replace(',','.'));
+      const nc={pingMin:f('pingMin'),pingShow:f('pingShow'),durMin:f('durMin'),diam:f('diam'),endDiam:f('endDiam'),mode:n('mode'),stepM:f('stepM'),stepEvery:f('stepEvery'),lat:n('lat')===''?'':f('lat'),lng:n('lng')===''?'':f('lng'),teamMode:n('teamMode')};
+      if([nc.pingMin,nc.durMin,nc.diam,nc.endDiam,nc.stepM,nc.stepEvery].some(x=>!(x>0))||!(nc.pingShow>=0)){$('#svm').textContent='Valeurs invalides.';return}
+      try{await db.doc('games/'+code).update({cfg:nc});$('#svm').textContent='Enregistré ✓'}catch(e){$('#svm').textContent='Erreur'}};
+  }
+  let a='';
+  if(adm&&lobby)a+='<button id="go">▶ Lancer la partie</button>';
+  if(adm&&G.status==='running')a+='<button id="end" class="s">⏹ Terminer la partie</button>';
+  a+='<button class="s" id="lv">Quitter</button>';$('#act').innerHTML=a;
+  if($('#go'))$('#go').onclick=async()=>{const c=cfg();if(c.lat===''||c.lng===''){alert('Définis d’abord le centre de la zone et enregistre.');return}
+    const pp=Object.values(P);if(!pp.some(p=>p.team==='hunter')||!pp.some(p=>p.team==='prey')){alert('Il faut au moins un chasseur et un chassé.');return}
+    await db.doc('games/'+code).update({status:'running',startedAt:Date.now()})};
+  if($('#end'))$('#end').onclick=()=>finish('admin');
+  $('#lv').onclick=()=>home();plist();
+}
+function finish(w){if(ending)return;ending=true;db.doc('games/'+code).update({status:'ended',endedAt:Date.now(),winner:w}).catch(()=>{ending=false})}
+function plist(){
+  const el=$('#pl');if(!el||!G)return;const adm=isAdmin(),me=P[uid]||{},lobby=G.status==='lobby',c=cfg();
+  const ids=Object.keys(P).sort((a,b)=>(P[a].name||'').localeCompare(P[b].name||''));
+  el.innerHTML=ids.map(id=>{const p=P[id],t=p.team;let ctl='';
+    if(adm&&lobby)ctl=`<select data-t="${id}" style="width:auto"><option value="">Sans équipe</option><option value="hunter">Chasseur</option><option value="prey">Chassé</option></select>`;
+    else if(G.status==='running'&&t==='prey'&&!p.caught&&(id===uid||me.team==='hunter'||adm))ctl=`<button class="sm s" data-c="${id}">${id===uid?'Je suis capturé':'Capturé'}</button>`;
+    return `<div class="row"><b>${esc(p.name||'?')}${id===G.adminId?' 👑':''}${id===uid?' (moi)':''}</b><span class="tag ${t==='hunter'?'h':t==='prey'?'p':''}">${T[t||'']}</span>${p.caught?'<span class="tag">capturé</span>':''}${ctl}</div>`}).join('')||'<p class="mut">Personne pour l’instant.</p>';
+  el.querySelectorAll('select[data-t]').forEach(s=>{s.value=P[s.dataset.t].team||'';s.onchange=()=>db.doc(`games/${code}/players/${s.dataset.t}`).update({team:s.value,caught:false})});
+  el.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>db.doc(`games/${code}/players/${b.dataset.c}`).update({caught:true}));
+  const tmEl=$('#tm');if(tmEl){
+    if(lobby&&c.teamMode==='choose')tmEl.innerHTML=`<h2>Mon équipe</h2><button class="${me.team==='hunter'?'':'s'}" data-m="hunter">🔴 Chasseur</button><button class="${me.team==='prey'?'':'s'}" data-m="prey">🟢 Chassé</button>`;
+    else tmEl.innerHTML=`<h2>Mon équipe</h2><p>${T[me.team||'']}${lobby&&c.teamMode==='admin'?' <span class="mut">(attribuée par l’admin)</span>':''}</p>`;
+    tmEl.querySelectorAll('button[data-m]').forEach(b=>b.onclick=()=>db.doc(`games/${code}/players/${uid}`).update({team:b.dataset.m}));
+  }
+}
+const fmt=ms=>{ms=Math.max(0,Math.round(ms/1000));return Math.floor(ms/60)+':'+String(ms%60).padStart(2,'0')};
+function radius(c,el){const r0=c.diam/2,r1=Math.min(c.endDiam,c.diam)/2;
+  if(c.mode==='steps')return Math.max(r1,r0-Math.floor(el/(c.stepEvery*60000))*c.stepM/2);
+  return r0+(r1-r0)*Math.min(1,el/(c.durMin*60000));}
+const dist=(c,p)=>{const k=Math.PI/180,x=(p.lng-c.lng)*111320*Math.cos(c.lat*k),y=(p.lat-c.lat)*110540;return Math.hypot(x,y)};
+function update(){
+  if(!G||!$('#info'))return;const c=cfg(),run=G.status==='running',end=G.status==='ended';
+  const el=run?Date.now()-G.startedAt:end?(G.endedAt||Date.now())-G.startedAt:0,me=P[uid]||{};
+  const r=radius(c,el),adm=isAdmin();
+  if(run){
+    const pm=c.pingMin*60000,i=Math.floor(el/pm);
+    if(i!==ping.idx){ping.idx=i;ping.at=Date.now();ping.snap={};Object.keys(P).forEach(id=>{const p=P[id];if(p.team==='prey'&&p.lat!=null&&!p.caught)ping.snap[id]={lat:p.lat,lng:p.lng,name:p.name}})}
+    if(el>=c.durMin*60000)finish('prey');
+    const pr=Object.values(P).filter(p=>p.team==='prey');if(pr.length&&pr.every(p=>p.caught))finish('hunters');
+  }
+  const nx=run?c.pingMin*60000-(el%(c.pingMin*60000)):0;
+  let s=`<b>${G.status==='lobby'?'Salon d’attente':run?'Partie en cours':'Partie terminée'}</b><br>`;
+  if(run)s+=`Temps restant : <b>${fmt(c.durMin*60000-el)}</b> · Prochain ping : <b>${fmt(nx)}</b><br>`;
+  s+=`Zone : <b>${Math.round(r*2)} m</b> de diamètre`;
+  if(c.mode==='steps'&&run){const ns=c.stepEvery*60000-(el%(c.stepEvery*60000));s+=` · prochaine réduction dans ${fmt(ns)}`}
+  if(run&&me.team==='hunter'&&c.pingShow>0){const rest=c.pingShow*1000-(Date.now()-ping.at);if(rest>0)s+='<br>Ping visible encore <b>'+fmt(rest)+'</b>'}
+  $('#info').innerHTML=s;
+  const b=$('#banner');let msg='',cls='';
+  if(end){msg=G.winner==='hunters'?'🔴 Les chasseurs gagnent !':G.winner==='prey'?'🟢 Les chassés gagnent !':'Partie terminée.';cls='ok'}
+  else if(run&&me.team&&c.lat!==''&&myPos){if(dist(c,myPos)>r){msg='⚠️ Tu es hors de la zone ! Reviens vite.';cls='warn';if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}}
+  if(run&&me.caught){msg='Tu as été capturé. Tu deviens spectateur.';cls='warn'}
+  b.style.display=msg?'block':'none';b.textContent=msg;b.className=cls;
+  draw(c,r,run,adm,me);
+}
+function draw(c,r,run,adm,me){
+  if(!map)return;layer.clearLayers();
+  if(c.lat===''||c.lng===''||c.lat==null)return;
+  const ll=[c.lat,c.lng],k=ll+','+c.diam;
+  if(view!==k){view=k;map.fitBounds(L.circle(ll,{radius:c.diam/2}).getBounds(),{padding:[20,20]})}
+  L.circle(ll,{radius:c.diam/2,color:'#888',weight:2,dashArray:'8 8',fill:false}).addTo(layer);
+  L.circle(ll,{radius:r,color:'#e5484d',weight:3,fillColor:'#e5484d',fillOpacity:.1}).addTo(layer);
+  const dot=(p,col,lab,big)=>{if(p.lat==null)return;L.circleMarker([p.lat,p.lng],{radius:big?10:8,color:'#fff',weight:2,fillColor:col,fillOpacity:1}).bindTooltip(lab,{permanent:true,direction:'top',offset:[0,-8]}).addTo(layer)};
+  const H_='#e5484d',P_='#2f9e5b',pv=c.pingShow===0||Date.now()-ping.at<c.pingShow*1000;
+  Object.keys(P).forEach(id=>{const p=P[id];if(id===uid||!p.team||p.caught)return;
+    if(adm)dot(p,p.team==='hunter'?H_:P_,p.name||'?');
+    else if(me.team==='hunter'){if(p.team==='hunter')dot(p,H_,p.name||'?');else if(run&&pv&&ping.snap[id])dot(ping.snap[id],P_,(p.name||'?')+' ('+fmt(Date.now()-ping.at)+')')}
+    else if(me.team==='prey'&&p.team==='prey')dot(p,P_,p.name||'?');
+  });
+  if(myPos&&me.team)dot(myPos,'#3b82f6','Moi',true);
+}
+init();
+</script></body></html>
