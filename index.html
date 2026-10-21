@@ -41,13 +41,12 @@ const FIREBASE_CONFIG = {
   appId: "1:958488121814:web:5f89252018bfb26877d477",
   measurementId: "G-KTYPQJ1B23"
 };
-
 /* ================================================= */
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let db,uid,code,G=null,P={},unsubs=[],wid,lastSent=0,myPos=null,ping={idx:-1,snap:{},at:0},shown='',ending=false,tm,map,tile,layer,view='',bg=true,name='';
+let db,uid,code,G=null,P={},unsubs=[],wid,lastSent=0,myPos=null,ping={idx:-1,snap:{},at:0},shown='',ending=false,tm,map,tile,layer,view='',bg=true,ready=false,poly=[],name='';
 try{name=localStorage.getItem('mh_name')||''}catch(e){}
-const D={pingMin:5,pingShow:60,diam:1000,endDiam:100,durMin:60,mode:'continuous',stepM:100,stepEvery:10,lat:'',lng:'',teamMode:'choose'};
+const D={pingMin:5,pingShow:60,diam:1000,endDiam:100,durMin:60,mode:'continuous',stepM:100,stepEvery:10,lat:'',lng:'',teamMode:'choose',shape:'circle',move:false,convert:true,poly:[]};
 const cfg=()=>Object.assign({},D,(G&&G.cfg)||{});
 const T={hunter:'Chasseur',prey:'Chassé','':'Sans équipe'};
 
@@ -71,7 +70,7 @@ function home(err){
   $('#mk').onclick=async()=>{if(!nm())return;const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<5;i++)c+=A[Math.floor(Math.random()*A.length)];
     try{await db.doc('games/'+c).set({adminId:uid,status:'lobby',cfg:D,created:Date.now()});enter(c)}catch(e){$('#er').textContent='Création impossible : '+(e.message||e.code)}};
 }
-function cleanup(){unsubs.forEach(f=>f());unsubs=[];clearInterval(tm);if(wid!=null&&navigator.geolocation)navigator.geolocation.clearWatch(wid);wid=null;if(map){map.remove();map=null}G=null;P={};shown='';ending=false;ping={idx:-1,snap:{},at:0}}
+function cleanup(){unsubs.forEach(f=>f());unsubs=[];clearInterval(tm);if(wid!=null&&navigator.geolocation)navigator.geolocation.clearWatch(wid);wid=null;if(map){map.remove();map=null}G=null;P={};shown='';ending=false;ready=false;poly=[];ping={idx:-1,snap:{},at:0}}
 async function enter(c){
   cleanup();code=c;
   const pr=db.doc(`games/${c}/players/${uid}`);
@@ -80,34 +79,46 @@ async function enter(c){
     if(!s.exists){home('Cette partie n’existe plus.');return}
     G=s.data();const k=G.status+(G.adminId===uid);if(k!==shown){shown=k;build()}update();
   }));
-  unsubs.push(db.collection(`games/${c}/players`).onSnapshot(q=>{P={};q.docs.forEach(d=>P[d.id]=d.data());plist();update()}));
+  unsubs.push(db.collection(`games/${c}/players`).onSnapshot(q=>{P={};q.docs.forEach(d=>P[d.id]=d.data());ready=true;plist();update()}));
   startGeo();tm=setInterval(update,1000);
 }
 function startGeo(){
   if(!navigator.geolocation)return;
   wid=navigator.geolocation.watchPosition(p=>{
     myPos={lat:p.coords.latitude,lng:p.coords.longitude};
-    const m=P[uid];if(!m||!m.team||Date.now()-lastSent<4000)return;lastSent=Date.now();
-    db.doc(`games/${code}/players/${uid}`).update({lat:myPos.lat,lng:myPos.lng,ts:Date.now()}).catch(()=>{});
+    sendPos();
   },e=>{myPos=null},{enableHighAccuracy:true,maximumAge:2000});
 }
 const isAdmin=()=>G&&G.adminId===uid;
+function sendPos(){const m=P[uid];if(!myPos||!m||!m.team||Date.now()-lastSent<4000)return;lastSent=Date.now();db.doc(`games/${code}/players/${uid}`).update({lat:myPos.lat,lng:myPos.lng,ts:Date.now()}).catch(()=>{})}
+function capture(id){const pr=db.doc(`games/${code}/players/${id}`);if(cfg().convert!==false)pr.update({team:'hunter',caught:false,wasCaught:true});else pr.update({caught:true})}
+const cen=pl=>({lat:pl.reduce((a,q)=>a+q.lat,0)/pl.length,lng:pl.reduce((a,q)=>a+q.lng,0)/pl.length});
+function inside(pts,p){let ins=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j];if((a.lng>p.lng)!==(b.lng>p.lng)&&p.lat<(b.lat-a.lat)*(p.lng-a.lng)/(b.lng-a.lng)+a.lat)ins=!ins}return ins}
+function zone(c,el){
+  const r=radius(c,el),r0=c.diam/2,r1=Math.min(c.endDiam,c.diam)/2,f=r/r0,pr=r0===r1?0:(r0-r)/(r0-r1);
+  if(c.shape==='polygon'){const pl=c.poly||[];if(pl.length<3)return{r,f,pts:[],base:pl};const ce=cen(pl);
+    return{r,f,base:pl,pts:pl.map(q=>({lat:ce.lat+(q.lat-ce.lat)*f,lng:ce.lng+(q.lng-ce.lng)*f}))}}
+  const e=G&&G.endC;return{r,f,cn:e&&c.move?{lat:c.lat+(e.lat-c.lat)*pr,lng:c.lng+(e.lng-c.lng)*pr}:{lat:c.lat,lng:c.lng}}}
 function mkMap(){
   if(map){map.remove();map=null}
   map=L.map('map').setView([46.6,2.4],5);layer=L.layerGroup().addTo(map);
   tile=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});if(bg)tile.addTo(map);view='';
-  if(isAdmin()&&G.status==='lobby')map.on('click',e=>{$('#c_lat').value=e.latlng.lat.toFixed(6);$('#c_lng').value=e.latlng.lng.toFixed(6)});
+  if(isAdmin()&&G.status==='lobby')map.on('click',e=>{if($('#c_shape').value==='polygon'){poly.push({lat:+e.latlng.lat.toFixed(6),lng:+e.latlng.lng.toFixed(6)});update()}else{$('#c_lat').value=e.latlng.lat.toFixed(6);$('#c_lng').value=e.latlng.lng.toFixed(6)}});
 }
 function build(){
-  const c=cfg(),adm=isAdmin(),lobby=G.status==='lobby';
+  const c=cfg(),adm=isAdmin(),lobby=G.status==='lobby';poly=(c.poly||[]).slice();
   let h=`<h1>🎯 Partie <span class="code">${esc(code)}</span></h1><div id="banner"></div><div class="card" id="info"></div><div id="map"></div>
-  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="bg" ${bg?'checked':''} style="width:auto;margin:0"> Fond de carte (OpenStreetMap)</label>`;
-  if(lobby&&adm)h+=`<div class="card"><h2>Réglages (admin)</h2><p class="mut">Astuce : touche la carte pour placer le centre de la zone.</p>
+  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="bg" ${bg?'checked':''} style="width:auto;margin:0"> Fond de carte (OpenStreetMap)</label><button class="s" id="ctr">📍 Me centrer sur moi</button>`;
+  if(lobby&&adm)h+=`<div class="card"><h2>Réglages (admin)</h2><p class="mut">Astuce : touche la carte pour placer le centre (cercle) ou les sommets (polygone). Pour un polygone, seul le rapport diamètre de départ / final compte.</p>
     <div class="g2"><label>Ping chasseurs (min)<input id="c_pingMin" type="number" min="0.5" step="0.5" value="${c.pingMin}"></label>
     <label>Durée de la partie (min)<input id="c_durMin" type="number" min="1" value="${c.durMin}"></label>
     <label>Diamètre de départ (m)<input id="c_diam" type="number" min="50" value="${c.diam}"></label>
     <label>Diamètre final (m)<input id="c_endDiam" type="number" min="10" value="${c.endDiam}"></label></div>
     <label>Le ping reste affiché (secondes, 0 = jusqu’au prochain ping)<input id="c_pingShow" type="number" min="0" value="${c.pingShow}"></label>
+    <label>Forme de la zone<select id="c_shape"><option value="circle">Cercle</option><option value="polygon">Polygone</option></select></label>
+    <div id="polybt"><button class="s sm" id="pundo">↩ Retirer le dernier point</button><button class="s sm" id="pclr">Tout effacer</button> <span class="mut" id="pcnt"></span></div>
+    <label>Déplacement de la zone<select id="c_move"><option value="0">Le centre reste fixe</option><option value="1">La zone se déplace en rétrécissant (cercle seulement)</option></select></label>
+    <label>Quand un chassé est capturé<select id="c_convert"><option value="1">Il devient chasseur</option><option value="0">Il est éliminé (spectateur)</option></select></label>
     <label>Réduction de la zone<select id="c_mode"><option value="continuous">Continue, sur toute la durée</option><option value="steps">Par paliers</option></select></label>
     <div class="g2" id="stp"><label>Palier : réduction (m de diamètre)<input id="c_stepM" type="number" min="10" value="${c.stepM}"></label>
     <label>Palier : toutes les (min)<input id="c_stepEvery" type="number" min="1" value="${c.stepEvery}"></label></div>
@@ -119,36 +130,41 @@ function build(){
   app.innerHTML=h;mkMap();
   $('#bg').onchange=e=>{bg=e.target.checked;bg?tile.addTo(map):map.removeLayer(tile)};
   if(lobby&&adm){
-    $('#c_mode').value=c.mode;$('#c_teamMode').value=c.teamMode;
+    $('#c_mode').value=c.mode;$('#c_teamMode').value=c.teamMode;$('#c_shape').value=c.shape;$('#c_move').value=c.move?'1':'0';$('#c_convert').value=c.convert===false?'0':'1';
+    const sh=()=>$('#polybt').style.display=$('#c_shape').value==='polygon'?'block':'none';sh();$('#c_shape').onchange=()=>{sh();update()};
+    $('#pundo').onclick=()=>{poly.pop();update()};$('#pclr').onclick=()=>{poly=[];update()};
     const sw=()=>$('#stp').style.display=$('#c_mode').value==='steps'?'grid':'none';sw();$('#c_mode').onchange=sw;
     $('#here').onclick=()=>{if(!myPos){$('#svm').textContent='Position indisponible (autorise la localisation).';return}$('#c_lat').value=myPos.lat.toFixed(6);$('#c_lng').value=myPos.lng.toFixed(6)};
     $('#sv').onclick=async()=>{const n=k=>$('#c_'+k).value,f=k=>parseFloat(String(n(k)).replace(',','.'));
-      const nc={pingMin:f('pingMin'),pingShow:f('pingShow'),durMin:f('durMin'),diam:f('diam'),endDiam:f('endDiam'),mode:n('mode'),stepM:f('stepM'),stepEvery:f('stepEvery'),lat:n('lat')===''?'':f('lat'),lng:n('lng')===''?'':f('lng'),teamMode:n('teamMode')};
+      const nc={pingMin:f('pingMin'),pingShow:f('pingShow'),durMin:f('durMin'),diam:f('diam'),endDiam:f('endDiam'),mode:n('mode'),stepM:f('stepM'),stepEvery:f('stepEvery'),lat:n('lat')===''?'':f('lat'),lng:n('lng')===''?'':f('lng'),teamMode:n('teamMode'),shape:n('shape'),move:n('move')==='1',convert:n('convert')==='1',poly:poly.slice()};
       if([nc.pingMin,nc.durMin,nc.diam,nc.endDiam,nc.stepM,nc.stepEvery].some(x=>!(x>0))||!(nc.pingShow>=0)){$('#svm').textContent='Valeurs invalides.';return}
+      if(nc.shape==='polygon'&&nc.poly.length<3){$('#svm').textContent='Place au moins 3 sommets sur la carte.';return}
       try{await db.doc('games/'+code).update({cfg:nc});$('#svm').textContent='Enregistré ✓'}catch(e){$('#svm').textContent='Erreur'}};
   }
   let a='';
   if(adm&&lobby)a+='<button id="go">▶ Lancer la partie</button>';
   if(adm&&G.status==='running')a+='<button id="end" class="s">⏹ Terminer la partie</button>';
   a+='<button class="s" id="lv">Quitter</button>';$('#act').innerHTML=a;
-  if($('#go'))$('#go').onclick=async()=>{const c=cfg();if(c.lat===''||c.lng===''){alert('Définis d’abord le centre de la zone et enregistre.');return}
+  if($('#go'))$('#go').onclick=async()=>{const c=cfg();if(c.shape==='polygon'?(c.poly||[]).length<3:(c.lat===''||c.lng==='')){alert('Définis d’abord la zone (centre ou sommets) et enregistre.');return}
     const pp=Object.values(P);if(!pp.some(p=>p.team==='hunter')||!pp.some(p=>p.team==='prey')){alert('Il faut au moins un chasseur et un chassé.');return}
-    await db.doc('games/'+code).update({status:'running',startedAt:Date.now()})};
+    let en=null;if(c.shape!=='polygon'&&c.move){const R=Math.max(0,c.diam/2-Math.min(c.endDiam,c.diam)/2),a=Math.random()*6.2832,d=Math.sqrt(Math.random())*R;en={lat:c.lat+d*Math.sin(a)/110540,lng:c.lng+d*Math.cos(a)/(111320*Math.cos(c.lat*Math.PI/180))}}
+    await db.doc('games/'+code).update({status:'running',startedAt:Date.now(),endC:en})};
   if($('#end'))$('#end').onclick=()=>finish('admin');
-  $('#lv').onclick=()=>home();plist();
+  $('#lv').onclick=()=>{if(confirm('Quitter la partie ? Tu pourras la rejoindre avec son identifiant.'))home()};
+  $('#ctr').onclick=()=>{if(myPos)map.setView([myPos.lat,myPos.lng],Math.max(map.getZoom(),17));else alert('Position indisponible : autorise la localisation.')};plist();
 }
 function finish(w){if(ending)return;ending=true;db.doc('games/'+code).update({status:'ended',endedAt:Date.now(),winner:w}).catch(()=>{ending=false})}
 function plist(){
   const el=$('#pl');if(!el||!G)return;const adm=isAdmin(),me=P[uid]||{},lobby=G.status==='lobby',c=cfg();
   const ids=Object.keys(P).sort((a,b)=>(P[a].name||'').localeCompare(P[b].name||''));
   el.innerHTML=ids.map(id=>{const p=P[id],t=p.team;let ctl='';
-    if(adm&&lobby)ctl=`<select data-t="${id}" style="width:auto"><option value="">Sans équipe</option><option value="hunter">Chasseur</option><option value="prey">Chassé</option></select>`;
-    else if(G.status==='running'&&t==='prey'&&!p.caught&&(id===uid||me.team==='hunter'||adm))ctl=`<button class="sm s" data-c="${id}">${id===uid?'Je suis capturé':'Capturé'}</button>`;
+    if(adm&&G.status!=='ended')ctl=`<select data-t="${id}" style="width:auto"><option value="">Sans équipe</option><option value="hunter">Chasseur</option><option value="prey">Chassé</option></select>`;
+    if(G.status==='running'&&t==='prey'&&!p.caught&&(id===uid||me.team==='hunter'||adm))ctl+=`<button class="sm s" data-c="${id}">${id===uid?'Je suis capturé':'Capturé'}</button>`;
     return `<div class="row"><b>${esc(p.name||'?')}${id===G.adminId?' 👑':''}${id===uid?' (moi)':''}</b><span class="tag ${t==='hunter'?'h':t==='prey'?'p':''}">${T[t||'']}</span>${p.caught?'<span class="tag">capturé</span>':''}${ctl}</div>`}).join('')||'<p class="mut">Personne pour l’instant.</p>';
   el.querySelectorAll('select[data-t]').forEach(s=>{s.value=P[s.dataset.t].team||'';s.onchange=()=>db.doc(`games/${code}/players/${s.dataset.t}`).update({team:s.value,caught:false})});
-  el.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>db.doc(`games/${code}/players/${b.dataset.c}`).update({caught:true}));
+  el.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>capture(b.dataset.c));
   const tmEl=$('#tm');if(tmEl){
-    if(lobby&&c.teamMode==='choose')tmEl.innerHTML=`<h2>Mon équipe</h2><button class="${me.team==='hunter'?'':'s'}" data-m="hunter">🔴 Chasseur</button><button class="${me.team==='prey'?'':'s'}" data-m="prey">🟢 Chassé</button>`;
+    if((lobby||(G.status==='running'&&!me.team))&&c.teamMode==='choose')tmEl.innerHTML=`<h2>Mon équipe</h2><button class="${me.team==='hunter'?'':'s'}" data-m="hunter">🔴 Chasseur</button><button class="${me.team==='prey'?'':'s'}" data-m="prey">🟢 Chassé</button>`;
     else tmEl.innerHTML=`<h2>Mon équipe</h2><p>${T[me.team||'']}${lobby&&c.teamMode==='admin'?' <span class="mut">(attribuée par l’admin)</span>':''}</p>`;
     tmEl.querySelectorAll('button[data-m]').forEach(b=>b.onclick=()=>db.doc(`games/${code}/players/${uid}`).update({team:b.dataset.m}));
   }
@@ -161,34 +177,47 @@ const dist=(c,p)=>{const k=Math.PI/180,x=(p.lng-c.lng)*111320*Math.cos(c.lat*k),
 function update(){
   if(!G||!$('#info'))return;const c=cfg(),run=G.status==='running',end=G.status==='ended';
   const el=run?Date.now()-G.startedAt:end?(G.endedAt||Date.now())-G.startedAt:0,me=P[uid]||{};
-  const r=radius(c,el),adm=isAdmin();
+  const Z=zone(c,el),r=Z.r,adm=isAdmin();sendPos();
   if(run){
     const pm=c.pingMin*60000,i=Math.floor(el/pm);
-    if(i!==ping.idx){ping.idx=i;ping.at=Date.now();ping.snap={};Object.keys(P).forEach(id=>{const p=P[id];if(p.team==='prey'&&p.lat!=null&&!p.caught)ping.snap[id]={lat:p.lat,lng:p.lng,name:p.name}})}
+    if(ready&&i!==ping.idx){ping.idx=i;ping.at=Date.now();ping.snap={};Object.keys(P).forEach(id=>{const p=P[id];if(p.team==='prey'&&p.lat!=null&&!p.caught)ping.snap[id]={lat:p.lat,lng:p.lng,name:p.name}})}
     if(el>=c.durMin*60000)finish('prey');
-    const pr=Object.values(P).filter(p=>p.team==='prey');if(pr.length&&pr.every(p=>p.caught))finish('hunters');
+    if(ready&&!Object.values(P).some(p=>p.team==='prey'&&!p.caught))finish('hunters');
   }
   const nx=run?c.pingMin*60000-(el%(c.pingMin*60000)):0;
   let s=`<b>${G.status==='lobby'?'Salon d’attente':run?'Partie en cours':'Partie terminée'}</b><br>`;
   if(run)s+=`Temps restant : <b>${fmt(c.durMin*60000-el)}</b> · Prochain ping : <b>${fmt(nx)}</b><br>`;
-  s+=`Zone : <b>${Math.round(r*2)} m</b> de diamètre`;
+  s+=c.shape==='polygon'?`Zone : <b>${Math.round(Z.f*100)} %</b> de la taille initiale`:`Zone : <b>${Math.round(r*2)} m</b> de diamètre`;
   if(c.mode==='steps'&&run){const ns=c.stepEvery*60000-(el%(c.stepEvery*60000));s+=` · prochaine réduction dans ${fmt(ns)}`}
   if(run&&me.team==='hunter'&&c.pingShow>0){const rest=c.pingShow*1000-(Date.now()-ping.at);if(rest>0)s+='<br>Ping visible encore <b>'+fmt(rest)+'</b>'}
   $('#info').innerHTML=s;
   const b=$('#banner');let msg='',cls='';
   if(end){msg=G.winner==='hunters'?'🔴 Les chasseurs gagnent !':G.winner==='prey'?'🟢 Les chassés gagnent !':'Partie terminée.';cls='ok'}
-  else if(run&&me.team&&c.lat!==''&&myPos){if(dist(c,myPos)>r){msg='⚠️ Tu es hors de la zone ! Reviens vite.';cls='warn';if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}}
+  else if(run&&me.team&&myPos&&!me.caught){const out=c.shape==='polygon'?(Z.pts.length>2&&!inside(Z.pts,myPos)):(c.lat!==''&&dist(Z.cn,myPos)>r);if(out){msg='⚠️ Tu es hors de la zone ! Reviens vite.';cls='warn';if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}}
   if(run&&me.caught){msg='Tu as été capturé. Tu deviens spectateur.';cls='warn'}
+  if(run&&me.wasCaught&&me.team==='hunter'){msg='Tu as été capturé : tu es maintenant chasseur !';cls='warn'}
   b.style.display=msg?'block':'none';b.textContent=msg;b.className=cls;
-  draw(c,r,run,adm,me);
+  draw(c,Z,run,adm,me);
 }
-function draw(c,r,run,adm,me){
+function draw(c,Z,run,adm,me){
   if(!map)return;layer.clearLayers();
-  if(c.lat===''||c.lng===''||c.lat==null)return;
-  const ll=[c.lat,c.lng],k=ll+','+c.diam;
-  if(view!==k){view=k;map.fitBounds(L.circle(ll,{radius:c.diam/2}).getBounds(),{padding:[20,20]})}
-  L.circle(ll,{radius:c.diam/2,color:'#888',weight:2,dashArray:'8 8',fill:false}).addTo(layer);
-  L.circle(ll,{radius:r,color:'#e5484d',weight:3,fillColor:'#e5484d',fillOpacity:.1}).addTo(layer);
+  const lobby=G.status==='lobby',pg=c.shape==='polygon',pc=$('#pcnt');if(pc)pc.textContent=poly.length+' sommet(s)';
+  const ll=q=>[q.lat,q.lng];
+  if(pg){
+    const draft=lobby&&adm,base=draft?poly:Z.base;
+    if(base.length){
+      if(draft)base.forEach(q=>L.circleMarker(ll(q),{radius:5,color:'#e5484d',fillOpacity:1}).addTo(layer));
+      const key=draft?'draft':'p'+base.length+base[0].lat;
+      if(view!==key){view=key;if(!draft)map.fitBounds(L.polygon(base.map(ll)).getBounds(),{padding:[20,20]})}
+      L.polygon(base.map(ll),{color:'#888',weight:2,dashArray:'8 8',fill:false}).addTo(layer);
+      if(!draft&&Z.pts.length>2)L.polygon(Z.pts.map(ll),{color:'#e5484d',weight:3,fillColor:'#e5484d',fillOpacity:.1}).addTo(layer);
+    }
+  }else if(c.lat!==''&&c.lng!==''&&c.lat!=null){
+    const o=[c.lat,c.lng],k=o+','+c.diam;
+    if(view!==k){view=k;map.fitBounds(L.circle(o,{radius:c.diam/2}).getBounds(),{padding:[20,20]})}
+    L.circle(o,{radius:c.diam/2,color:'#888',weight:2,dashArray:'8 8',fill:false}).addTo(layer);
+    L.circle([Z.cn.lat,Z.cn.lng],{radius:Z.r,color:'#e5484d',weight:3,fillColor:'#e5484d',fillOpacity:.1}).addTo(layer);
+  }
   const dot=(p,col,lab,big)=>{if(p.lat==null)return;L.circleMarker([p.lat,p.lng],{radius:big?10:8,color:'#fff',weight:2,fillColor:col,fillOpacity:1}).bindTooltip(lab,{permanent:true,direction:'top',offset:[0,-8]}).addTo(layer)};
   const H_='#e5484d',P_='#2f9e5b',pv=c.pingShow===0||Date.now()-ping.at<c.pingShow*1000;
   Object.keys(P).forEach(id=>{const p=P[id];if(id===uid||!p.team||p.caught)return;
