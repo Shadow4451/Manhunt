@@ -70,7 +70,7 @@ function home(err){
   $('#mk').onclick=async()=>{if(!nm())return;const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<5;i++)c+=A[Math.floor(Math.random()*A.length)];
     try{await db.doc('games/'+c).set({adminId:uid,status:'lobby',cfg:D,created:Date.now()});enter(c)}catch(e){$('#er').textContent='Création impossible : '+(e.message||e.code)}};
 }
-function cleanup(){unsubs.forEach(f=>f());unsubs=[];clearInterval(tm);if(wid!=null&&navigator.geolocation)navigator.geolocation.clearWatch(wid);wid=null;if(map){map.remove();map=null}G=null;P={};shown='';ending=false;ready=false;poly=[];ping={idx:-1,snap:{},at:0}}
+function cleanup(){unsubs.forEach(f=>f());unsubs=[];clearInterval(tm);if(wid!=null&&navigator.geolocation)navigator.geolocation.clearWatch(wid);wid=null;if(map){map.remove();map=null}G=null;P={};shown='';ending=false;ready=false;poly=[];pubIdx=-1;ping={idx:-1,snap:{},at:0}}
 async function enter(c){
   cleanup();code=c;
   const pr=db.doc(`games/${c}/players/${uid}`);
@@ -90,7 +90,11 @@ function startGeo(){
   },e=>{myPos=null},{enableHighAccuracy:true,maximumAge:2000});
 }
 const isAdmin=()=>G&&G.adminId===uid;
-function sendPos(){const m=P[uid];if(!myPos||!m||!m.team||Date.now()-lastSent<4000)return;lastSent=Date.now();db.doc(`games/${code}/players/${uid}`).update({lat:myPos.lat,lng:myPos.lng,ts:Date.now()}).catch(()=>{})}
+let pubIdx=-1;
+function sendPos(){const m=P[uid];if(!myPos||!m||!m.team||Date.now()-lastSent<4000)return;lastSent=Date.now();
+  const u={lat:myPos.lat,lng:myPos.lng,ts:Date.now()};
+  if(G&&G.status==='running'&&m.team==='prey'&&!m.caught){const i=Math.floor((Date.now()-G.startedAt)/(cfg().pingMin*60000));if(i!==pubIdx){pubIdx=i;u.pub={lat:myPos.lat,lng:myPos.lng,idx:i}}}
+  db.doc(`games/${code}/players/${uid}`).update(u).catch(()=>{})}
 function capture(id){const pr=db.doc(`games/${code}/players/${id}`);if(cfg().convert!==false)pr.update({team:'hunter',caught:false,wasCaught:true});else pr.update({caught:true})}
 const cen=pl=>({lat:pl.reduce((a,q)=>a+q.lat,0)/pl.length,lng:pl.reduce((a,q)=>a+q.lng,0)/pl.length});
 function inside(pts,p){let ins=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j];if((a.lng>p.lng)!==(b.lng>p.lng)&&p.lat<(b.lat-a.lat)*(p.lng-a.lng)/(b.lng-a.lng)+a.lat)ins=!ins}return ins}
@@ -189,7 +193,8 @@ function update(){
   if(run)s+=`Temps restant : <b>${fmt(c.durMin*60000-el)}</b> · Prochain ping : <b>${fmt(nx)}</b><br>`;
   s+=c.shape==='polygon'?`Zone : <b>${Math.round(Z.f*100)} %</b> de la taille initiale`:`Zone : <b>${Math.round(r*2)} m</b> de diamètre`;
   if(c.mode==='steps'&&run){const ns=c.stepEvery*60000-(el%(c.stepEvery*60000));s+=` · prochaine réduction dans ${fmt(ns)}`}
-  if(run&&me.team==='hunter'&&c.pingShow>0){const rest=c.pingShow*1000-(Date.now()-ping.at);if(rest>0)s+='<br>Ping visible encore <b>'+fmt(rest)+'</b>'}
+  if(run&&me.team==='hunter'&&c.pingShow>0){const rest=c.pingShow*1000-(el%(c.pingMin*60000));if(rest>0)s+='<br>Ping visible encore <b>'+fmt(rest)+'</b>'}
+  if(run&&(me.team==='hunter'||adm)){const pr=Object.values(P).filter(p=>p.team==='prey'&&!p.caught),gps=pr.filter(p=>p.ts&&Date.now()-p.ts<20000).length;s+=`<br><span class="mut">Chassés avec GPS actif : ${gps}/${pr.length}</span>`}
   $('#info').innerHTML=s;
   const b=$('#banner');let msg='',cls='';
   if(end){msg=G.winner==='hunters'?'🔴 Les chasseurs gagnent !':G.winner==='prey'?'🟢 Les chassés gagnent !':'Partie terminée.';cls='ok'}
@@ -222,7 +227,7 @@ function draw(c,Z,run,adm,me){
   const H_='#e5484d',P_='#2f9e5b',pv=c.pingShow===0||Date.now()-ping.at<c.pingShow*1000;
   Object.keys(P).forEach(id=>{const p=P[id];if(id===uid||!p.team||p.caught)return;
     if(adm)dot(p,p.team==='hunter'?H_:P_,p.name||'?');
-    else if(me.team==='hunter'){if(p.team==='hunter')dot(p,H_,p.name||'?');else if(run&&pv&&ping.snap[id])dot(ping.snap[id],P_,(p.name||'?')+' ('+fmt(Date.now()-ping.at)+')')}
+    else if(me.team==='hunter'){if(p.team==='hunter')dot(p,H_,p.name||'?');else if(run&&p.pub){const age=Date.now()-(G.startedAt+p.pub.idx*c.pingMin*60000);if(c.pingShow===0||age<c.pingShow*1000)dot(p.pub,P_,(p.name||'?')+' ('+fmt(age)+')')}}
     else if(me.team==='prey'&&p.team==='prey')dot(p,P_,p.name||'?');
   });
   if(myPos&&me.team)dot(myPos,'#3b82f6','Moi',true);
