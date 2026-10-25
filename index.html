@@ -1,37 +1,77 @@
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f6b1f">
 <title>Chasse à l’homme</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root{--bg:#f6f6f8;--fg:#1c1c22;--card:#fff;--bd:#d9d9e0;--ac:#e5484d;--mut:#6b6b78}
-@media (prefers-color-scheme:dark){:root{--bg:#15151a;--fg:#ececf1;--card:#202028;--bd:#34343f;--mut:#9a9aa8}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
-#app{max-width:640px;margin:0 auto;padding:16px}
-h1{margin:0 0 12px;font-size:24px}h2{margin:0 0 8px;font-size:17px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin:10px 0}
-label{display:block;font-size:13px;color:var(--mut);margin:6px 0}
-input,select{width:100%;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--fg);font:inherit;margin-top:2px}
-button{padding:9px 14px;border:0;border-radius:8px;background:var(--ac);color:#fff;font:inherit;font-weight:600;cursor:pointer;margin:4px 4px 4px 0}
-button.s{background:var(--bd);color:var(--fg)}button.sm{padding:4px 8px;font-size:13px}
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.err{color:var(--ac)}.mut{color:var(--mut);font-size:13px}
-#banner{padding:10px;border-radius:10px;font-weight:700;text-align:center;margin:8px 0;display:none}
-.warn{background:var(--ac);color:#fff}.ok{background:#2f9e5b;color:#fff}
-#map{height:min(75vw,460px);border-radius:12px;border:1px solid var(--bd);z-index:0}
-.leaflet-tooltip{font-weight:600}
-.row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--bd);flex-wrap:wrap}
-.row b{flex:1;min-width:90px}
-.tag{font-size:12px;padding:2px 7px;border-radius:99px;background:var(--bd)}
-.h{background:#e5484d;color:#fff}.p{background:#2f9e5b;color:#fff}
-.code{font:700 22px ui-monospace,monospace;letter-spacing:3px}
+body{--bg:#f4f5f3;--fg:#1a1d19;--cd:#fff;--bd:#d9dcd6;--mu:#6b7268;--ac:#0b5cab;--hl:#2f6b1f;--hud:#f7f8f6;--gs:#d8e2d3;--on:#fff}
+body.d{--bg:#0d0b0b;--fg:#f2f2f0;--cd:#17141a;--bd:#2e2a33;--mu:#9a96a2;--ac:#7dff1a;--hl:#7dff1a;--hud:#0f0d10;--gs:#24331c;--on:#000}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+button{font:inherit;cursor:pointer;margin:0}
+input{font:inherit}
+#app{height:100%}
+.home{height:100%;overflow:auto;padding:20px;max-width:560px;margin:auto}
+.home h1{color:var(--hl)}.cdd{background:var(--cd);border:1px solid var(--bd);border-radius:16px;padding:14px;margin:12px 0}
+.home input{width:100%;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--fg);margin:6px 0}
+.home button,.fill{background:var(--hl);color:var(--on);border:0;border-radius:12px;padding:11px 16px;font-weight:700}
+.er{color:#d33}.mu{color:var(--mu);font-size:13px}
+#map{position:fixed;inset:0;z-index:0;background:var(--bg)}
+body.d .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.55) saturate(.5) sepia(.5)}
+.leaflet-tooltip{font-weight:700}
+.hud{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:500;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.hud>*{pointer-events:auto}
+.top{background:var(--hud);border:1px solid var(--bd);border-radius:20px;padding:12px 20px;display:flex;justify-content:space-between}
+.top small{display:block;color:var(--mu);font-size:12px;letter-spacing:.14em;text-transform:uppercase}
+.top b{font:700 40px/1.1 ui-monospace,Menlo,monospace}
+.pill{background:var(--hud);border:1px solid var(--bd);border-radius:16px;padding:9px 14px;font:600 14px ui-monospace,Menlo,monospace;letter-spacing:.05em}
+.fab{width:48px;height:48px;border-radius:14px;background:var(--hud);border:1px solid var(--bd);display:grid;place-items:center;font-size:20px;color:var(--fg);padding:0}
+.row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chat{position:fixed;left:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:500}
+.cnt{position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);z-index:500;display:flex;flex-direction:column;gap:8px}
+.cnt div{border-radius:12px;padding:7px 12px;font:700 18px ui-monospace,monospace;border:1px solid}
+.cs{background:#dbeaf7;color:#0b7ad1;border-color:#9cc7ec}.cz{background:#e3f0d8;color:#2f8a1c;border-color:#aedb95}
+.bar{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:500;background:var(--hud);border:1px solid var(--bd);border-radius:22px;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.role{flex:1;min-width:90px;border-left:4px solid var(--ac);padding-left:10px;font-size:18px}
+.role span{color:var(--ac);font-size:14px}
+.btn{border:2px solid var(--ac);background:transparent;color:var(--ac);border-radius:14px;padding:10px 14px;font-weight:700}
+.btn.on{background:var(--ac);color:var(--hud)}
+#sh{position:fixed;inset:0;z-index:900;display:none;background:rgba(0,0,0,.4)}#sh.o{display:flex;align-items:flex-end}
+.pan{background:var(--bg);color:var(--fg);width:100%;max-height:88vh;overflow:auto;border-radius:26px 26px 0 0;border-top:3px solid var(--hl);padding:14px 18px calc(env(safe-area-inset-bottom,0px) + 20px)}
+.pan h2{color:var(--hl);margin:20px 0 4px;font-size:22px;text-transform:uppercase;letter-spacing:.03em}
+.tabs{display:flex;background:var(--cd);border:1px solid var(--bd);border-radius:99px;padding:6px;gap:4px}
+.tabs button{flex:1;border:0;border-radius:99px;background:none;color:var(--fg);font-size:20px;padding:12px}
+.tabs .on{background:var(--hl);color:var(--on)}
+.st{margin:18px 0}.st .h{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.v{color:var(--hl);font:600 17px ui-monospace,monospace}
+input[type=range]{width:100%;accent-color:var(--hl);margin-top:8px}
+.tg{appearance:none;-webkit-appearance:none;width:52px;height:30px;border-radius:99px;background:var(--bd);position:relative;margin:0;transition:.2s}
+.tg:checked{background:var(--hl)}.tg::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.2s}.tg:checked::after{left:25px}
+.seg{display:flex;border:1px solid var(--bd);border-radius:12px;overflow:hidden;margin-top:8px}
+.seg button{flex:1;border:0;background:var(--cd);color:var(--fg);padding:11px 6px;font-weight:700;font-size:13px}
+.seg .on{background:var(--gs);color:var(--hl)}
+.sm{border:1px solid var(--bd);background:var(--cd);color:var(--fg);border-radius:10px;padding:8px 12px;margin:4px 4px 4px 0}
+.calc{color:var(--mu);font:13px/1.6 ui-monospace,monospace;margin-top:6px}
+.top2{display:flex;justify-content:space-between;align-items:center;margin-top:14px}.top2 h2{margin:0}
+.coin{background:var(--gs);color:var(--hl);border-radius:99px;padding:8px 14px;font:700 16px ui-monospace,monospace}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.it{background:var(--cd);border:1px solid var(--bd);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:6px;text-align:left;color:var(--fg);min-height:150px}
+.it .ic{width:44px;height:44px;border-radius:12px;background:var(--bg);display:grid;place-items:center;font-size:22px}
+.it h4{margin:6px 0 0;font-size:14px;text-transform:uppercase}.it p{margin:0;color:var(--mu);font-size:13px;flex:1}
+.it .pr{font:700 16px ui-monospace,monospace}.it.no{opacity:.45}
+.cl{height:38vh;overflow:auto;margin:10px 0;display:flex;flex-direction:column;gap:6px}
+.msg{background:var(--cd);border:1px solid var(--bd);border-radius:12px;padding:7px 11px;max-width:85%}.msg.me{align-self:flex-end;background:var(--gs)}.msg b{font-size:12px;color:var(--mu);display:block}
+.pan input[type=text],#ci{flex:1;padding:11px;border:1px solid var(--bd);border-radius:10px;background:var(--cd);color:var(--fg);min-width:0}
+.prow{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd);flex-wrap:wrap}.prow b{flex:1}
+.tag{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--gs);color:var(--hl)}
+.warn{background:#d33;color:#fff;border-color:#d33}.okb{background:var(--hl);color:var(--on)}
+#ts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 150px);z-index:1000;background:#111;color:#fff;padding:10px 16px;border-radius:14px;font-weight:600;display:none;max-width:90%;text-align:center}
 </style></head><body><div id="app"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-/* ====== COLLE ICI TA CONFIGURATION FIREBASE ====== */
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyCXr9ogmq-vXYBclYxYzKnHm91_HEgz3Wo",
   authDomain: "manhunt-database.firebaseapp.com",
@@ -41,196 +81,294 @@ const FIREBASE_CONFIG = {
   appId: "1:958488121814:web:5f89252018bfb26877d477",
   measurementId: "G-KTYPQJ1B23"
 };
-/* ================================================= */
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let db,uid,code,G=null,P={},unsubs=[],wid,lastSent=0,myPos=null,ping={idx:-1,snap:{},at:0},shown='',ending=false,tm,map,tile,layer,view='',bg=true,ready=false,poly=[],name='';
+const inc=n=>firebase.firestore.FieldValue.increment(n);
+let db,uid,code,G=null,P={},CH=[],unsubs=[],wid,lastSent=0,myPos=null,shown='',ending=false,tm,map,tile,layer,view='',bg=true,ready=false,name='',E={},SH=null,pubIdx=-1,earnAt=0,lastBuy=0,outAt=0,outDone=false,scanC=null,svT,barK='',chatTo='all',wl;
 try{name=localStorage.getItem('mh_name')||''}catch(e){}
-const D={pingMin:5,pingShow:60,diam:1000,endDiam:100,durMin:60,mode:'continuous',stepM:100,stepEvery:10,lat:'',lng:'',teamMode:'choose',shape:'circle',move:false,convert:true,poly:[]};
+const D={wait:30,capType:'pin',capDist:20,convert:true,teamMode:'choose',shape:'circle',diam:500,durMin:59,phases:4,endDiam:50,lastTime:300,trans:20,move:'fixed',pings:true,pingMin:2,first:false,named:false,pingAll:'all',pingShow:0,outTime:20,outPing:false,eco:true,shop:true,cpm:10,ccap:50,cdPrey:120,cdHunt:0,lat:'',lng:'',poly:[]};
 const cfg=()=>Object.assign({},D,(G&&G.cfg)||{});
-const T={hunter:'Chasseur',prey:'Chassé','':'Sans équipe'};
+const isAdmin=()=>G&&G.adminId===uid;
+const C=()=>G&&G.status==='lobby'&&isAdmin()?E:cfg();
+const mv=c=>c.move===true||c.move==='random';
+const fmt=ms=>{ms=Math.max(0,Math.round(ms/1000));return Math.floor(ms/60)+':'+String(ms%60).padStart(2,'0')};
+const distM=(a,b)=>Math.hypot((a.lng-b.lng)*111320*Math.cos(a.lat*Math.PI/180),(a.lat-b.lat)*110540);
+const toast=(m,ms=2600)=>{const t=$('#ts');if(!t)return;t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',ms)};
+/* Réglages : [onglet, clé, libellé, type, min|options, max, pas, unité] */
+const F=[
+[0,'wait','Attente des zombies','n',0,300,5,'s'],
+[0,'capType','Type de capture','s',[['gps','Distance GPS'],['pin','Code PIN']]],
+[0,'capDist','Distance de capture (GPS)','n',5,100,5,'m'],
+[0,'convert','Capturé = devient zombie','b'],
+[0,'teamMode','Équipes','s',[['choose','Chacun choisit'],['admin','L’admin attribue']]],
+[1,'shape','Forme de la zone','s',[['circle','Cercle'],['polygon','Polygone']]],
+[1,'diam','Zone initiale','n',100,3000,50,'m'],
+[1,'durMin','Durée','n',5,180,1,'min'],
+[1,'phases','Phases de zone','n',1,10,1,''],
+[1,'endDiam','Zone minimale','n',20,1000,10,'m'],
+[1,'lastTime','Temps dans la dernière zone','n',0,1800,30,'s'],
+[1,'trans','Durée de transition','n',5,120,5,'s'],
+[1,'move','Déplacement de zone','s',[['fixed','Centre'],['random','Aléatoire']]],
+[2,'pings','Pings','b'],
+[2,'pingMin','Intervalle de révélation','n',0.5,10,0.5,'min'],
+[2,'first','Premier ping immédiat','b'],
+[2,'named','Pings avec noms','b'],
+[2,'pingAll','Type de ping','s',[['all','Tout le monde'],['prey','Cachés uniquement']]],
+[2,'pingShow','Garder les pings (0 = jusqu’au suivant)','n',0,600,10,'s'],
+[2,'outTime','Temps hors zone','n',5,120,5,'s'],
+[2,'outPing','Ping hors zone','b'],
+[3,'eco','Objets & économie','b'],
+[3,'shop','Boutique des cachés','b'],
+[3,'cpm','Crédits / min','n',0,100,1,'/min'],
+[3,'ccap','Crédits / capture','n',0,500,10,''],
+[3,'cdPrey','Recharge cachés','n',0,600,10,'s'],
+[3,'cdHunt','Recharge zombies','n',0,600,10,'s']];
+/* Objets : [id, nom, description, prix, icône] */
+const IT={hunter:[
+['ping','Ping','Révèle la distance du survivant le plus proche',20,'📡'],
+['scan','Scanner','Affiche un cercle de 50 m autour d’un survivant',50,'🎯'],
+['ghost','Fantôme','Empêche la diffusion de ton prochain ping',80,'👻'],
+['move','Déplaceur de zone','Déplace la zone 80 % plus près de toi',100,'🧲'],
+['rev','Révélation','Montre TOUS les survivants pendant 5 secondes',150,'👁']],
+prey:[
+['sense','Sixième sens','Montre la direction du zombie le plus proche',80,'🦻'],
+['shield','Bouclier de zone','Protège contre le prochain ping hors zone',100,'🛡'],
+['decoy','Leurre','Place un faux ping sur la carte',100,'🪤'],
+['camo','Camouflage','Ignore ton prochain ping de position',150,'🫥']]};
+
+async function wake(){try{if(navigator.wakeLock&&!wl){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>wl=null)}}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&code)wake()});
 
 function init(){
-  if(!FIREBASE_CONFIG.projectId){app.innerHTML='<h1>Configuration manquante</h1><p class="err">Colle ta configuration Firebase en haut du fichier index.html.</p>';return}
-  try{firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore()}catch(e){app.innerHTML='<p class="err">Erreur Firebase : '+esc(e.message)+'</p>';return}
+  try{firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore()}catch(e){app.innerHTML='<p class="er">Erreur Firebase : '+esc(e.message)+'</p>';return}
   try{uid=localStorage.getItem('mh_uid')}catch(e){}
   if(!uid){uid=Math.random().toString(36).slice(2)+Date.now().toString(36);try{localStorage.setItem('mh_uid',uid)}catch(e){}}
   home();
 }
 function home(err){
-  cleanup();
-  app.innerHTML=`<h1>🎯 Chasse à l’homme</h1>
-  <div class="card"><label>Ton pseudo<input id="nm" maxlength="20" value="${esc(name)}"></label></div>
-  <div class="card"><h2>Rejoindre une partie</h2><input id="cd" placeholder="Identifiant de partie" maxlength="8" style="text-transform:uppercase"><button id="jn">Rejoindre</button></div>
-  <div class="card"><h2>Organiser</h2><p class="mut">Tu seras l’admin : tu règles la zone, les pings et tu lances la partie.</p><button id="mk">Créer une partie</button></div>
-  <p class="err" id="er">${err||''}</p>`;
+  cleanup();document.body.className='';
+  app.innerHTML=`<div class="home"><h1>🎯 Chasse à l’homme</h1>
+  <div class="cdd"><label>Ton pseudo<input id="nm" maxlength="20" value="${esc(name)}"></label></div>
+  <div class="cdd"><h3>Rejoindre une partie</h3><input id="cd" placeholder="Identifiant de partie" maxlength="8" style="text-transform:uppercase"><button id="jn">Rejoindre</button></div>
+  <div class="cdd"><h3>Organiser</h3><p class="mu">Tu seras l’admin : tu règles la partie et tu la lances.</p><button id="mk">Créer une partie</button></div>
+  <p class="er" id="er">${err||''}</p></div>`;
   const nm=()=>{name=$('#nm').value.trim();if(!name){$('#er').textContent='Choisis un pseudo.';return false}try{localStorage.setItem('mh_name',name)}catch(e){}return true};
   $('#jn').onclick=async()=>{if(!nm())return;const c=$('#cd').value.trim().toUpperCase();if(!c)return;
     try{const s=await db.doc('games/'+c).get();if(!s.exists){$('#er').textContent='Partie introuvable.';return}enter(c)}catch(e){$('#er').textContent='Erreur : '+(e.message||e.code)}};
   $('#mk').onclick=async()=>{if(!nm())return;const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<5;i++)c+=A[Math.floor(Math.random()*A.length)];
     try{await db.doc('games/'+c).set({adminId:uid,status:'lobby',cfg:D,created:Date.now()});enter(c)}catch(e){$('#er').textContent='Création impossible : '+(e.message||e.code)}};
 }
-function cleanup(){unsubs.forEach(f=>f());unsubs=[];clearInterval(tm);if(wid!=null&&navigator.geolocation)navigator.geolocation.clearWatch(wid);wid=null;if(map){map.remove();map=null}G=null;P={};shown='';ending=false;ready=false;poly=[];pubIdx=-1;ping={idx:-1,snap:{},at:0}}
+function cleanup(){unsubs.forEach(f=>f());unsubs=[];clearInterval(tm);if(wid!=null&&navigator.geolocation)navigator.geolocation.clearWatch(wid);wid=null;if(map){map.remove();map=null}if(wl){wl.release().catch(()=>{});wl=null}
+  G=null;P={};CH=[];shown='';ending=false;ready=false;pubIdx=-1;earnAt=0;lastBuy=0;outAt=0;outDone=false;scanC=null;barK='';SH=null;code=null}
 async function enter(c){
-  cleanup();code=c;
-  const pr=db.doc(`games/${c}/players/${uid}`);
-  try{const s=await pr.get();if(!s.exists)await pr.set({name,team:'',caught:false});else await pr.update({name})}catch(e){home('Erreur : '+(e.message||e.code));return}
+  cleanup();code=c;wake();
+  const pr=db.doc(`games/${c}/players/${uid}`),pin=String(1000+Math.floor(Math.random()*9000));
+  try{const s=await pr.get();if(!s.exists)await pr.set({name,team:'',caught:false,money:0,pin});else{const u={name};if(!s.data().pin)u.pin=pin;await pr.update(u)}}catch(e){home('Erreur : '+(e.message||e.code));return}
   unsubs.push(db.doc('games/'+c).onSnapshot(s=>{
     if(!s.exists){home('Cette partie n’existe plus.');return}
     G=s.data();const k=G.status+(G.adminId===uid);if(k!==shown){shown=k;build()}update();
   }));
-  unsubs.push(db.collection(`games/${c}/players`).onSnapshot(q=>{P={};q.docs.forEach(d=>P[d.id]=d.data());ready=true;plist();update()}));
+  unsubs.push(db.collection(`games/${c}/players`).onSnapshot(q=>{P={};q.docs.forEach(d=>P[d.id]=d.data());ready=true;update();liveRefresh()}));
+  unsubs.push(db.collection(`games/${c}/chat`).orderBy('ts').limitToLast(60).onSnapshot(q=>{CH=q.docs.map(d=>d.data());liveRefresh()},()=>{}));
   startGeo();tm=setInterval(update,1000);
 }
 function startGeo(){
   if(!navigator.geolocation)return;
-  wid=navigator.geolocation.watchPosition(p=>{
-    myPos={lat:p.coords.latitude,lng:p.coords.longitude};
-    sendPos();
-  },e=>{myPos=null},{enableHighAccuracy:true,maximumAge:2000});
+  wid=navigator.geolocation.watchPosition(p=>{myPos={lat:p.coords.latitude,lng:p.coords.longitude};sendPos()},e=>{myPos=null},{enableHighAccuracy:true,maximumAge:2000});
 }
-const isAdmin=()=>G&&G.adminId===uid;
-let pubIdx=-1;
 function sendPos(){const m=P[uid];if(!myPos||!m||!m.team||Date.now()-lastSent<4000)return;lastSent=Date.now();
-  const u={lat:myPos.lat,lng:myPos.lng,ts:Date.now()};
-  if(G&&G.status==='running'&&m.team==='prey'&&!m.caught){const i=Math.floor((Date.now()-G.startedAt)/(cfg().pingMin*60000));if(i!==pubIdx){pubIdx=i;u.pub={lat:myPos.lat,lng:myPos.lng,idx:i}}}
+  const u={lat:myPos.lat,lng:myPos.lng,ts:Date.now()},c=cfg();
+  if(G&&G.status==='running'&&!m.caught&&c.pings!==false&&(m.team==='prey'||c.pingAll==='all')){
+    const i=Math.floor((Date.now()-G.startedAt)/(c.pingMin*60000))-(c.first?0:1);
+    if(i>=0&&i!==pubIdx){pubIdx=i;
+      if(m.ghost){u.pub=null;u.ghost=false}
+      else if(m.decoy){u.pub=Object.assign({at:Date.now()},m.decoy);u.decoy=null}
+      else u.pub={lat:myPos.lat,lng:myPos.lng,at:Date.now()}}}
   db.doc(`games/${code}/players/${uid}`).update(u).catch(()=>{})}
-function capture(id){const pr=db.doc(`games/${code}/players/${id}`);if(cfg().convert!==false)pr.update({team:'hunter',caught:false,wasCaught:true});else pr.update({caught:true})}
+function capture(id){const c=cfg(),u=c.convert!==false?{team:'hunter',caught:false,wasCaught:true,pub:null}:{caught:true};
+  db.doc(`games/${code}/players/${id}`).update(u);
+  if(c.eco!==false&&c.ccap)db.doc(`games/${code}/players/${uid}`).update({money:inc(c.ccap)});toast('Capturé !')}
+function doCapture(){const c=cfg();
+  if(Date.now()<G.startedAt+c.wait*1000)return toast('Les zombies sont encore retenus');
+  const pr=Object.keys(P).filter(i=>P[i].team==='prey'&&!P[i].caught);
+  if(c.capType==='pin'){const v=(prompt('Code du survivant (4 chiffres) :')||'').trim();if(!v)return;const id=pr.find(i=>P[i].pin===v);id?capture(id):toast('Code incorrect')}
+  else{if(!myPos)return toast('Position indisponible');
+    const n=pr.filter(i=>P[i].lat!=null).map(i=>[i,distM(myPos,P[i])]).sort((a,b)=>a[1]-b[1])[0];
+    n&&n[1]<=c.capDist?capture(n[0]):toast('Aucun survivant à moins de '+c.capDist+' m')}}
+function buy(id){const me=P[uid]||{},c=cfg(),h=me.team==='hunter',it=IT[h?'hunter':'prey'].find(i=>i[0]===id),cd=(h?c.cdHunt:c.cdPrey)*1000;
+  if(!it||G.status!=='running')return;
+  if((me.money||0)<it[3])return toast('Pas assez de crédits');
+  if(Date.now()<lastBuy+cd)return toast('Recharge : '+Math.ceil((lastBuy+cd-Date.now())/1000)+' s');
+  const near=t=>{if(!myPos)return null;return Object.keys(P).filter(i=>P[i].team===t&&!P[i].caught&&P[i].lat!=null&&i!==uid).map(i=>[i,distM(myPos,P[i])]).sort((a,b)=>a[1]-b[1])[0]};
+  const pr=db.doc(`games/${code}/players/${uid}`),gm=db.doc('games/'+code),off=(p,d,a)=>({lat:p.lat+d*Math.sin(a)/110540,lng:p.lng+d*Math.cos(a)/(111320*Math.cos(p.lat*Math.PI/180))});
+  let m='',n;
+  if(id==='ping'){n=near('prey');if(!n)return toast('Aucun survivant localisé');m='Survivant le plus proche : '+Math.round(n[1])+' m'}
+  else if(id==='scan'){n=near('prey');if(!n)return toast('Aucun survivant localisé');scanC=Object.assign(off(P[n[0]],Math.random()*25,Math.random()*6.283),{until:Date.now()+30000});m='Zone de 50 m affichée pendant 30 s'}
+  else if(id==='ghost'||id==='camo'){pr.update({ghost:true});m='Ton prochain ping sera ignoré'}
+  else if(id==='move'){if(c.shape==='polygon'||!myPos||c.lat==='')return toast('Impossible avec cette zone');gm.update({'cfg.lat':c.lat+(myPos.lat-c.lat)*.8,'cfg.lng':c.lng+(myPos.lng-c.lng)*.8});m='Zone rapprochée de toi'}
+  else if(id==='rev'){gm.update({reveal:{until:Date.now()+5000}});m='Tous les survivants sont visibles 5 s'}
+  else if(id==='sense'){n=near('hunter');if(!n)return toast('Aucun zombie localisé');const p=P[n[0]],b=(Math.atan2((p.lng-myPos.lng)*Math.cos(myPos.lat*Math.PI/180),p.lat-myPos.lat)*180/Math.PI+360)%360;m='Zombie le plus proche : '+['N','NE','E','SE','S','SO','O','NO'][Math.round(b/45)%8]+', '+Math.round(n[1])+' m'}
+  else if(id==='shield'){pr.update({shield:true});m='Bouclier actif'}
+  else if(id==='decoy'){if(!myPos)return toast('Position indisponible');pr.update({decoy:off(myPos,150,Math.random()*6.283)});m='Faux ping prêt pour ton prochain ping'}
+  lastBuy=Date.now();pr.update({money:inc(-it[3])});toast(m,4500)}
+/* ---- zone ---- */
+const rk=(c,i)=>{const r0=c.diam/2,r1=Math.min(c.endDiam,c.diam)/2;return r0+(r1-r0)*i/Math.max(1,c.phases-1)};
+function radius(c,el){const N=c.phases;if(N<2)return c.diam/2;const s=el/1000,L=Math.max(1,(c.durMin*60-c.lastTime)/(N-1)),k=Math.min(N-1,Math.floor(s/L));
+  if(k<1)return rk(c,0);const t=Math.min(1,(s-k*L)/Math.max(1,c.trans));return rk(c,k-1)+(rk(c,k)-rk(c,k-1))*t}
+function nextShrink(c,el){const N=c.phases;if(N<2)return null;const L=Math.max(1,(c.durMin*60-c.lastTime)/(N-1))*1000,k=Math.floor(el/L);return k>=N-1?null:{ms:(k+1)*L-el,to:Math.round(rk(c,k+1)*2)}}
+function calc(c){let o=['Départ '+c.diam+' m'];if(c.phases>1){const L=(c.durMin*60-c.lastTime)/(c.phases-1);for(let i=1;i<c.phases;i++)o.push('après '+fmt(i*L*1000)+' : '+Math.round(rk(c,i)*2)+' m')}return o.join(' → ')}
 const cen=pl=>({lat:pl.reduce((a,q)=>a+q.lat,0)/pl.length,lng:pl.reduce((a,q)=>a+q.lng,0)/pl.length});
 function inside(pts,p){let ins=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j];if((a.lng>p.lng)!==(b.lng>p.lng)&&p.lat<(b.lat-a.lat)*(p.lng-a.lng)/(b.lng-a.lng)+a.lat)ins=!ins}return ins}
 function zone(c,el){
   const r=radius(c,el),r0=c.diam/2,r1=Math.min(c.endDiam,c.diam)/2,f=r/r0,pr=r0===r1?0:(r0-r)/(r0-r1);
   if(c.shape==='polygon'){const pl=c.poly||[];if(pl.length<3)return{r,f,pts:[],base:pl};const ce=cen(pl);
     return{r,f,base:pl,pts:pl.map(q=>({lat:ce.lat+(q.lat-ce.lat)*f,lng:ce.lng+(q.lng-ce.lng)*f}))}}
-  const e=G&&G.endC;return{r,f,cn:e&&c.move?{lat:c.lat+(e.lat-c.lat)*pr,lng:c.lng+(e.lng-c.lng)*pr}:{lat:c.lat,lng:c.lng}}}
+  const e=G&&G.endC;return{r,f,cn:e&&mv(c)?{lat:c.lat+(e.lat-c.lat)*pr,lng:c.lng+(e.lng-c.lng)*pr}:{lat:c.lat,lng:c.lng}}}
+/* ---- écran de jeu ---- */
 function mkMap(){
   if(map){map.remove();map=null}
-  map=L.map('map').setView([46.6,2.4],5);layer=L.layerGroup().addTo(map);
+  map=L.map('map',{zoomControl:false}).setView([46.6,2.4],5);layer=L.layerGroup().addTo(map);
   tile=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'});if(bg)tile.addTo(map);view='';
-  if(isAdmin()&&G.status==='lobby')map.on('click',e=>{if($('#c_shape').value==='polygon'){poly.push({lat:+e.latlng.lat.toFixed(6),lng:+e.latlng.lng.toFixed(6)});update()}else{$('#c_lat').value=e.latlng.lat.toFixed(6);$('#c_lng').value=e.latlng.lng.toFixed(6)}});
+  map.on('click',e=>{if(!isAdmin()||G.status!=='lobby')return;const q={lat:+e.latlng.lat.toFixed(6),lng:+e.latlng.lng.toFixed(6)};
+    if(E.shape==='polygon')E.poly.push(q);else{E.lat=q.lat;E.lng=q.lng}save();update()});
 }
 function build(){
-  const c=cfg(),adm=isAdmin(),lobby=G.status==='lobby';poly=(c.poly||[]).slice();
-  let h=`<h1>🎯 Partie <span class="code">${esc(code)}</span></h1><div id="banner"></div><div class="card" id="info"></div><div id="map"></div>
-  <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="bg" ${bg?'checked':''} style="width:auto;margin:0"> Fond de carte (OpenStreetMap)</label><button class="s" id="ctr">📍 Me centrer sur moi</button>`;
-  if(lobby&&adm)h+=`<div class="card"><h2>Réglages (admin)</h2><p class="mut">Astuce : touche la carte pour placer le centre (cercle) ou les sommets (polygone). Pour un polygone, seul le rapport diamètre de départ / final compte.</p>
-    <div class="g2"><label>Ping chasseurs (min)<input id="c_pingMin" type="number" min="0.5" step="0.5" value="${c.pingMin}"></label>
-    <label>Durée de la partie (min)<input id="c_durMin" type="number" min="1" value="${c.durMin}"></label>
-    <label>Diamètre de départ (m)<input id="c_diam" type="number" min="50" value="${c.diam}"></label>
-    <label>Diamètre final (m)<input id="c_endDiam" type="number" min="10" value="${c.endDiam}"></label></div>
-    <label>Le ping reste affiché (secondes, 0 = jusqu’au prochain ping)<input id="c_pingShow" type="number" min="0" value="${c.pingShow}"></label>
-    <label>Forme de la zone<select id="c_shape"><option value="circle">Cercle</option><option value="polygon">Polygone</option></select></label>
-    <div id="polybt"><button class="s sm" id="pundo">↩ Retirer le dernier point</button><button class="s sm" id="pclr">Tout effacer</button> <span class="mut" id="pcnt"></span></div>
-    <label>Déplacement de la zone<select id="c_move"><option value="0">Le centre reste fixe</option><option value="1">La zone se déplace en rétrécissant (cercle seulement)</option></select></label>
-    <label>Quand un chassé est capturé<select id="c_convert"><option value="1">Il devient chasseur</option><option value="0">Il est éliminé (spectateur)</option></select></label>
-    <label>Réduction de la zone<select id="c_mode"><option value="continuous">Continue, sur toute la durée</option><option value="steps">Par paliers</option></select></label>
-    <div class="g2" id="stp"><label>Palier : réduction (m de diamètre)<input id="c_stepM" type="number" min="10" value="${c.stepM}"></label>
-    <label>Palier : toutes les (min)<input id="c_stepEvery" type="number" min="1" value="${c.stepEvery}"></label></div>
-    <div class="g2"><label>Centre : latitude<input id="c_lat" value="${c.lat}"></label><label>Centre : longitude<input id="c_lng" value="${c.lng}"></label></div>
-    <button class="s" id="here">📍 Centre = ma position</button>
-    <label>Équipes<select id="c_teamMode"><option value="choose">Chacun choisit</option><option value="admin">L’admin attribue</option></select></label>
-    <button id="sv">Enregistrer</button><span class="mut" id="svm"></span></div>`;
-  h+=`<div class="card" id="tm"></div><div class="card"><h2>Joueurs</h2><div id="pl"></div></div><div id="act"></div>`;
-  app.innerHTML=h;mkMap();
-  $('#bg').onchange=e=>{bg=e.target.checked;bg?tile.addTo(map):map.removeLayer(tile)};
-  if(lobby&&adm){
-    $('#c_mode').value=c.mode;$('#c_teamMode').value=c.teamMode;$('#c_shape').value=c.shape;$('#c_move').value=c.move?'1':'0';$('#c_convert').value=c.convert===false?'0':'1';
-    const sh=()=>$('#polybt').style.display=$('#c_shape').value==='polygon'?'block':'none';sh();$('#c_shape').onchange=()=>{sh();update()};
-    $('#pundo').onclick=()=>{poly.pop();update()};$('#pclr').onclick=()=>{poly=[];update()};
-    const sw=()=>$('#stp').style.display=$('#c_mode').value==='steps'?'grid':'none';sw();$('#c_mode').onchange=sw;
-    $('#here').onclick=()=>{if(!myPos){$('#svm').textContent='Position indisponible (autorise la localisation).';return}$('#c_lat').value=myPos.lat.toFixed(6);$('#c_lng').value=myPos.lng.toFixed(6)};
-    $('#sv').onclick=async()=>{const n=k=>$('#c_'+k).value,f=k=>parseFloat(String(n(k)).replace(',','.'));
-      const nc={pingMin:f('pingMin'),pingShow:f('pingShow'),durMin:f('durMin'),diam:f('diam'),endDiam:f('endDiam'),mode:n('mode'),stepM:f('stepM'),stepEvery:f('stepEvery'),lat:n('lat')===''?'':f('lat'),lng:n('lng')===''?'':f('lng'),teamMode:n('teamMode'),shape:n('shape'),move:n('move')==='1',convert:n('convert')==='1',poly:poly.slice()};
-      if([nc.pingMin,nc.durMin,nc.diam,nc.endDiam,nc.stepM,nc.stepEvery].some(x=>!(x>0))||!(nc.pingShow>=0)){$('#svm').textContent='Valeurs invalides.';return}
-      if(nc.shape==='polygon'&&nc.poly.length<3){$('#svm').textContent='Place au moins 3 sommets sur la carte.';return}
-      try{await db.doc('games/'+code).update({cfg:nc});$('#svm').textContent='Enregistré ✓'}catch(e){$('#svm').textContent='Erreur'}};
-  }
-  let a='';
-  if(adm&&lobby)a+='<button id="go">▶ Lancer la partie</button>';
-  if(adm&&G.status==='running')a+='<button id="end" class="s">⏹ Terminer la partie</button>';
-  a+='<button class="s" id="lv">Quitter</button>';$('#act').innerHTML=a;
-  if($('#go'))$('#go').onclick=async()=>{const c=cfg();if(c.shape==='polygon'?(c.poly||[]).length<3:(c.lat===''||c.lng==='')){alert('Définis d’abord la zone (centre ou sommets) et enregistre.');return}
-    const pp=Object.values(P);if(!pp.some(p=>p.team==='hunter')||!pp.some(p=>p.team==='prey')){alert('Il faut au moins un chasseur et un chassé.');return}
-    let en=null;if(c.shape!=='polygon'&&c.move){const R=Math.max(0,c.diam/2-Math.min(c.endDiam,c.diam)/2),a=Math.random()*6.2832,d=Math.sqrt(Math.random())*R;en={lat:c.lat+d*Math.sin(a)/110540,lng:c.lng+d*Math.cos(a)/(111320*Math.cos(c.lat*Math.PI/180))}}
-    await db.doc('games/'+code).update({status:'running',startedAt:Date.now(),endC:en})};
-  if($('#end'))$('#end').onclick=()=>finish('admin');
-  $('#lv').onclick=()=>{if(confirm('Quitter la partie ? Tu pourras la rejoindre avec son identifiant.'))home()};
-  $('#ctr').onclick=()=>{if(myPos)map.setView([myPos.lat,myPos.lng],Math.max(map.getZoom(),17));else alert('Position indisponible : autorise la localisation.')};plist();
+  const adm=isAdmin(),lobby=G.status==='lobby';barK='';
+  if(adm&&lobby){E=Object.assign({},D,G.cfg);E.poly=(E.poly||[]).slice();if(E.move===true)E.move='random';if(E.move===false)E.move='fixed'}
+  app.innerHTML=`<div id="map"></div><div class="hud"><div class="top"><div><small>Temps</small><b id="t1">--:--</b></div><div style="text-align:right"><small>Zone</small><b id="t2" style="color:var(--hl)">-</b></div></div>
+  <div class="pill" id="p1"></div><div class="row2"><button class="fab" id="gear" style="display:${adm&&lobby?'grid':'none'}">⚙️</button><button class="fab" id="ctr">📍</button><button class="fab" id="bgb">🗺</button><div class="pill" id="p2"></div></div><div class="pill" id="bn" style="display:none"></div></div>
+  <button class="fab chat" id="chb">💬</button><div class="cnt"><div class="cs" id="ns"></div><div class="cz" id="nz"></div></div><div class="bar" id="bar"></div><div id="sh"></div><div id="ts"></div>`;
+  mkMap();
+  $('#gear').onclick=()=>openSettings(0);
+  $('#ctr').onclick=()=>{if(myPos)map.setView([myPos.lat,myPos.lng],Math.max(map.getZoom(),17));else toast('Position indisponible : autorise la localisation.')};
+  $('#bgb').onclick=()=>{bg=!bg;bg?tile.addTo(map):map.removeLayer(tile)};
+  $('#chb').onclick=openChat;
 }
+function save(){clearTimeout(svT);svT=setTimeout(()=>db.doc('games/'+code).update({cfg:E}).catch(()=>{}),400)}
 function finish(w){if(ending)return;ending=true;db.doc('games/'+code).update({status:'ended',endedAt:Date.now(),winner:w}).catch(()=>{ending=false})}
-function plist(){
-  const el=$('#pl');if(!el||!G)return;const adm=isAdmin(),me=P[uid]||{},lobby=G.status==='lobby',c=cfg();
-  const ids=Object.keys(P).sort((a,b)=>(P[a].name||'').localeCompare(P[b].name||''));
-  el.innerHTML=ids.map(id=>{const p=P[id],t=p.team;let ctl='';
-    if(adm&&G.status!=='ended')ctl=`<select data-t="${id}" style="width:auto"><option value="">Sans équipe</option><option value="hunter">Chasseur</option><option value="prey">Chassé</option></select>`;
-    if(G.status==='running'&&t==='prey'&&!p.caught&&(id===uid||me.team==='hunter'||adm))ctl+=`<button class="sm s" data-c="${id}">${id===uid?'Je suis capturé':'Capturé'}</button>`;
-    return `<div class="row"><b>${esc(p.name||'?')}${id===G.adminId?' 👑':''}${id===uid?' (moi)':''}</b><span class="tag ${t==='hunter'?'h':t==='prey'?'p':''}">${T[t||'']}</span>${p.caught?'<span class="tag">capturé</span>':''}${ctl}</div>`}).join('')||'<p class="mut">Personne pour l’instant.</p>';
-  el.querySelectorAll('select[data-t]').forEach(s=>{s.value=P[s.dataset.t].team||'';s.onchange=()=>db.doc(`games/${code}/players/${s.dataset.t}`).update({team:s.value,caught:false})});
-  el.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>capture(b.dataset.c));
-  const tmEl=$('#tm');if(tmEl){
-    if((lobby||(G.status==='running'&&!me.team))&&c.teamMode==='choose')tmEl.innerHTML=`<h2>Mon équipe</h2><button class="${me.team==='hunter'?'':'s'}" data-m="hunter">🔴 Chasseur</button><button class="${me.team==='prey'?'':'s'}" data-m="prey">🟢 Chassé</button>`;
-    else tmEl.innerHTML=`<h2>Mon équipe</h2><p>${T[me.team||'']}${lobby&&c.teamMode==='admin'?' <span class="mut">(attribuée par l’admin)</span>':''}</p>`;
-    tmEl.querySelectorAll('button[data-m]').forEach(b=>b.onclick=()=>db.doc(`games/${code}/players/${uid}`).update({team:b.dataset.m}));
-  }
-}
-const fmt=ms=>{ms=Math.max(0,Math.round(ms/1000));return Math.floor(ms/60)+':'+String(ms%60).padStart(2,'0')};
-function radius(c,el){const r0=c.diam/2,r1=Math.min(c.endDiam,c.diam)/2;
-  if(c.mode==='steps')return Math.max(r1,r0-Math.floor(el/(c.stepEvery*60000))*c.stepM/2);
-  return r0+(r1-r0)*Math.min(1,el/(c.durMin*60000));}
-const dist=(c,p)=>{const k=Math.PI/180,x=(p.lng-c.lng)*111320*Math.cos(c.lat*k),y=(p.lat-c.lat)*110540;return Math.hypot(x,y)};
+async function start(){
+  await db.doc('games/'+code).update({cfg:E});const c=E;
+  if(c.shape==='polygon'?(c.poly||[]).length<3:(c.lat===''||c.lng==='')){alert('Définis d’abord la zone : ouvre ⚙️ puis touche la carte.');return}
+  const pp=Object.values(P);if(!pp.some(p=>p.team==='hunter')||!pp.some(p=>p.team==='prey')){alert('Il faut au moins un zombie et un survivant.');return}
+  let en=null;if(c.shape!=='polygon'&&mv(c)){const R=Math.max(0,c.diam/2-Math.min(c.endDiam,c.diam)/2),a=Math.random()*6.2832,d=Math.sqrt(Math.random())*R;en={lat:c.lat+d*Math.sin(a)/110540,lng:c.lng+d*Math.cos(a)/(111320*Math.cos(c.lat*Math.PI/180))}}
+  db.doc('games/'+code).update({status:'running',startedAt:Date.now(),endC:en})}
+function bar(me){
+  const c=cfg(),run=G.status==='running',lobby=G.status==='lobby',adm=isAdmin(),k=[G.status,me.team,me.caught,adm,C().teamMode,c.capType,c.shop,c.eco].join();
+  if(k===barK){const m=$('#mn');if(m)m.textContent=me.money||0;return}barK=k;
+  const rl=me.team==='hunter'?'ZOMBIE':me.team==='prey'?'SURVIVANT':adm?'ADMIN':'SPECTATEUR',ex='<button class="fab" id="lv" style="color:#d33">⎋</button>';
+  let h='';
+  if(lobby){h=`<div class="role"><b>Salon</b><br><span>${esc(code)}</span></div>`;
+    if(C().teamMode==='choose')h+=`<button class="btn ${me.team==='hunter'?'on':''}" data-m="hunter">Zombie</button><button class="btn ${me.team==='prey'?'on':''}" data-m="prey">Survivant</button>`;
+    h+=(adm?'<button class="fill" id="go">▶ Lancer</button>':'')+'<button class="fab" id="pls">👥</button>'+ex}
+  else if(run){h=`<div class="role"><b>${rl}</b><br><span>${me.caught?'CAPTURÉ':'ACTIF'}</span></div>`;
+    if(me.team==='hunter')h+='<button class="btn" id="cap">🎯 Capturer</button>';
+    if(me.team&&c.eco!==false&&(me.team==='hunter'||c.shop!==false))h+=`<button class="btn" id="shp">🛒 <span id="mn">${me.money||0}</span></button>`;
+    if(me.team==='prey'&&c.capType==='pin')h+='<button class="fab" id="key">🔑</button>';
+    h+='<button class="fab" id="pls">👥</button>'+ex}
+  else h=`<div class="role"><b>Terminée</b></div>`+ex;
+  $('#bar').innerHTML=h;
+  const g=s=>$(s);
+  if(g('#go'))g('#go').onclick=start;
+  if(g('#cap'))g('#cap').onclick=doCapture;
+  if(g('#shp'))g('#shp').onclick=openShop;
+  if(g('#pls'))g('#pls').onclick=openPlayers;
+  if(g('#key'))g('#key').onclick=()=>toast('Ton code : '+(P[uid]&&P[uid].pin),8000);
+  if(g('#lv'))g('#lv').onclick=()=>{if(confirm('Quitter la partie ? Tu pourras la rejoindre avec son identifiant.'))home()};
+  document.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>db.doc(`games/${code}/players/${uid}`).update({team:b.dataset.m}))}
 function update(){
-  if(!G||!$('#info'))return;const c=cfg(),run=G.status==='running',end=G.status==='ended';
-  const el=run?Date.now()-G.startedAt:end?(G.endedAt||Date.now())-G.startedAt:0,me=P[uid]||{};
-  const Z=zone(c,el),r=Z.r,adm=isAdmin();sendPos();
+  if(!G||!$('#t1'))return;
+  const c=C(),run=G.status==='running',end=G.status==='ended',lobby=G.status==='lobby',adm=isAdmin(),me=P[uid]||{};
+  const el=run?Date.now()-G.startedAt:end?(G.endedAt||Date.now())-G.startedAt:0,Z=zone(c,el),r=Z.r;
+  document.body.className=me.team==='hunter'&&!lobby?'d':'';
+  sendPos();
   if(run){
-    const pm=c.pingMin*60000,i=Math.floor(el/pm);
-    if(ready&&i!==ping.idx){ping.idx=i;ping.at=Date.now();ping.snap={};Object.keys(P).forEach(id=>{const p=P[id];if(p.team==='prey'&&p.lat!=null&&!p.caught)ping.snap[id]={lat:p.lat,lng:p.lng,name:p.name}})}
     if(el>=c.durMin*60000)finish('prey');
     if(ready&&!Object.values(P).some(p=>p.team==='prey'&&!p.caught))finish('hunters');
+    if(c.eco!==false&&me.team&&!me.caught){if(!earnAt)earnAt=Date.now();if(Date.now()-earnAt>=60000){earnAt+=60000;if(c.cpm)db.doc(`games/${code}/players/${uid}`).update({money:inc(c.cpm)})}}
   }
-  const nx=run?c.pingMin*60000-(el%(c.pingMin*60000)):0;
-  let s=`<b>${G.status==='lobby'?'Salon d’attente':run?'Partie en cours':'Partie terminée'}</b><br>`;
-  if(run)s+=`Temps restant : <b>${fmt(c.durMin*60000-el)}</b> · Prochain ping : <b>${fmt(nx)}</b><br>`;
-  s+=c.shape==='polygon'?`Zone : <b>${Math.round(Z.f*100)} %</b> de la taille initiale`:`Zone : <b>${Math.round(r*2)} m</b> de diamètre`;
-  if(c.mode==='steps'&&run){const ns=c.stepEvery*60000-(el%(c.stepEvery*60000));s+=` · prochaine réduction dans ${fmt(ns)}`}
-  if(run&&me.team==='hunter'&&c.pingShow>0){const rest=c.pingShow*1000-(el%(c.pingMin*60000));if(rest>0)s+='<br>Ping visible encore <b>'+fmt(rest)+'</b>'}
-  if(run&&(me.team==='hunter'||adm)){const pr=Object.values(P).filter(p=>p.team==='prey'&&!p.caught),gps=pr.filter(p=>p.ts&&Date.now()-p.ts<20000).length;s+=`<br><span class="mut">Chassés avec GPS actif : ${gps}/${pr.length}</span>`}
-  $('#info').innerHTML=s;
-  const b=$('#banner');let msg='',cls='';
-  if(end){msg=G.winner==='hunters'?'🔴 Les chasseurs gagnent !':G.winner==='prey'?'🟢 Les chassés gagnent !':'Partie terminée.';cls='ok'}
-  else if(run&&me.team&&myPos&&!me.caught){const out=c.shape==='polygon'?(Z.pts.length>2&&!inside(Z.pts,myPos)):(c.lat!==''&&dist(Z.cn,myPos)>r);if(out){msg='⚠️ Tu es hors de la zone ! Reviens vite.';cls='warn';if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}}}
-  if(run&&me.caught){msg='Tu as été capturé. Tu deviens spectateur.';cls='warn'}
-  if(run&&me.wasCaught&&me.team==='hunter'){msg='Tu as été capturé : tu es maintenant chasseur !';cls='warn'}
-  b.style.display=msg?'block':'none';b.textContent=msg;b.className=cls;
-  draw(c,Z,run,adm,me);
+  $('#t1').textContent=lobby?'--:--':fmt(c.durMin*60000-el);
+  $('#t2').textContent=c.shape==='polygon'?Math.round(Z.f*100)+'%':Math.round(r*2)+'M';
+  const ns=run?nextShrink(c,el):null,pm=c.pingMin*60000;
+  $('#p1').textContent=lobby?'SALON · '+code+' · '+Object.keys(P).length+' JOUEUR(S)':end?'PARTIE TERMINÉE':ns?`RÉTRÉCISSEMENT DANS ${fmt(ns.ms)} → ${ns.to}M`:'ZONE MINIMALE';
+  const p2=$('#p2');p2.style.display=run&&c.pings!==false?'block':'none';
+  if(run)p2.textContent='👁 PING DANS '+fmt(pm-(el%pm));
+  const Ps=Object.values(P);$('#ns').textContent='👤 '+Ps.filter(p=>p.team==='prey'&&!p.caught).length;$('#nz').textContent='✖ '+Ps.filter(p=>p.team==='hunter').length;
+  let msg='',cls='warn';
+  if(end){msg=G.winner==='hunters'?'🧟 Les zombies gagnent !':G.winner==='prey'?'🟢 Les survivants gagnent !':'Partie terminée.';cls='okb'}
+  else if(run&&me.team==='hunter'&&Date.now()<G.startedAt+c.wait*1000)msg='Zombies libérés dans '+Math.ceil((G.startedAt+c.wait*1000-Date.now())/1000)+' s';
+  else if(run&&me.team&&myPos&&!me.caught){
+    const out=c.shape==='polygon'?(Z.pts.length>2&&!inside(Z.pts,myPos)):(c.lat!==''&&distM(Z.cn,myPos)>r);
+    if(out){if(!outAt)outAt=Date.now();const left=c.outTime-(Date.now()-outAt)/1000;
+      if(left>0)msg='⚠️ Hors zone : '+Math.ceil(left)+' s';
+      else{msg='⚠️ Hors zone !';if(navigator.vibrate)try{navigator.vibrate(200)}catch(e){}
+        if(!outDone){outDone=true;if(me.team==='prey'&&c.outPing){if(me.shield){db.doc(`games/${code}/players/${uid}`).update({shield:false});toast('Bouclier utilisé')}else db.doc(`games/${code}/players/${uid}`).update({pub:{lat:myPos.lat,lng:myPos.lng,at:Date.now()}})}}}}
+    else{outAt=0;outDone=false}}
+  if(run&&me.caught)msg='Tu as été capturé : spectateur.';
+  else if(run&&me.wasCaught&&me.team==='hunter'&&!msg){msg='Capturé : tu es maintenant zombie !';cls='okb'}
+  const b=$('#bn');b.style.display=msg?'block':'none';b.textContent=msg;b.className='pill '+cls;
+  bar(me);draw(c,Z,run,adm,me);
 }
 function draw(c,Z,run,adm,me){
   if(!map)return;layer.clearLayers();
-  const lobby=G.status==='lobby',pg=c.shape==='polygon',pc=$('#pcnt');if(pc)pc.textContent=poly.length+' sommet(s)';
-  const ll=q=>[q.lat,q.lng];
-  if(pg){
-    const draft=lobby&&adm,base=draft?poly:Z.base;
+  const lobby=G.status==='lobby',pg=c.shape==='polygon',ll=q=>[q.lat,q.lng],draft=lobby&&adm;
+  if(pg){const base=c.poly||[];
     if(base.length){
-      if(draft)base.forEach(q=>L.circleMarker(ll(q),{radius:5,color:'#e5484d',fillOpacity:1}).addTo(layer));
-      const key=draft?'draft':'p'+base.length+base[0].lat;
+      if(draft)base.forEach(q=>L.circleMarker(ll(q),{radius:5,color:'#d33',fillOpacity:1}).addTo(layer));
+      const key='p'+base.length+base[0].lat;
       if(view!==key){view=key;if(!draft)map.fitBounds(L.polygon(base.map(ll)).getBounds(),{padding:[20,20]})}
       L.polygon(base.map(ll),{color:'#888',weight:2,dashArray:'8 8',fill:false}).addTo(layer);
-      if(!draft&&Z.pts.length>2)L.polygon(Z.pts.map(ll),{color:'#e5484d',weight:3,fillColor:'#e5484d',fillOpacity:.1}).addTo(layer);
-    }
+      if(!draft&&Z.pts.length>2)L.polygon(Z.pts.map(ll),{color:'#e5484d',weight:3,fillColor:'#e5484d',fillOpacity:.1}).addTo(layer)}
   }else if(c.lat!==''&&c.lng!==''&&c.lat!=null){
     const o=[c.lat,c.lng],k=o+','+c.diam;
     if(view!==k){view=k;map.fitBounds(L.circle(o,{radius:c.diam/2}).getBounds(),{padding:[20,20]})}
     L.circle(o,{radius:c.diam/2,color:'#888',weight:2,dashArray:'8 8',fill:false}).addTo(layer);
-    L.circle([Z.cn.lat,Z.cn.lng],{radius:Z.r,color:'#e5484d',weight:3,fillColor:'#e5484d',fillOpacity:.1}).addTo(layer);
-  }
+    L.circle([Z.cn.lat,Z.cn.lng],{radius:Z.r,color:'#e5484d',weight:3,fillColor:'#e5484d',fillOpacity:.1}).addTo(layer)}
   const dot=(p,col,lab,big)=>{if(p.lat==null)return;L.circleMarker([p.lat,p.lng],{radius:big?10:8,color:'#fff',weight:2,fillColor:col,fillOpacity:1}).bindTooltip(lab,{permanent:true,direction:'top',offset:[0,-8]}).addTo(layer)};
-  const H_='#e5484d',P_='#2f9e5b',pv=c.pingShow===0||Date.now()-ping.at<c.pingShow*1000;
+  const H_='#e5484d',P_='#2f9e5b',rev=G.reveal&&Date.now()<G.reveal.until,nm=p=>c.named?(p.name||'?'):(p.team==='hunter'?'Zombie':'Survivant');
   Object.keys(P).forEach(id=>{const p=P[id];if(id===uid||!p.team||p.caught)return;
+    const pubOk=p.pub&&(c.pingShow===0||Date.now()-p.pub.at<c.pingShow*1000);
     if(adm)dot(p,p.team==='hunter'?H_:P_,p.name||'?');
-    else if(me.team==='hunter'){if(p.team==='hunter')dot(p,H_,p.name||'?');else if(run&&p.pub){const age=Date.now()-(G.startedAt+p.pub.idx*c.pingMin*60000);if(c.pingShow===0||age<c.pingShow*1000)dot(p.pub,P_,(p.name||'?')+' ('+fmt(age)+')')}}
-    else if(me.team==='prey'&&p.team==='prey')dot(p,P_,p.name||'?');
-  });
+    else if(me.team==='hunter'){if(p.team==='hunter')dot(p,H_,p.name||'?');else if(run&&rev)dot(p,P_,p.name||'?');else if(run&&pubOk)dot(p.pub,P_,nm(p)+' ('+fmt(Date.now()-p.pub.at)+')')}
+    else if(me.team==='prey'){if(p.team==='prey')dot(p,P_,p.name||'?');else if(run&&pubOk)dot(p.pub,H_,nm(p)+' ('+fmt(Date.now()-p.pub.at)+')')}});
+  if(scanC&&Date.now()<scanC.until)L.circle([scanC.lat,scanC.lng],{radius:50,color:'#7dff1a',weight:2,fillOpacity:.08}).addTo(layer);
   if(myPos&&me.team)dot(myPos,'#3b82f6','Moi',true);
 }
+/* ---- panneaux ---- */
+function openSheet(live,fn,rf){SH={live,fn,rf};const s=$('#sh');s.className='o';s.innerHTML='<div class="pan" id="pan"></div>';s.onclick=e=>{if(e.target===s)closeSheet()};fn($('#pan'))}
+function closeSheet(){SH=null;const s=$('#sh');if(s){s.className='';s.innerHTML=''}}
+function liveRefresh(){if(SH&&SH.live&&$('#pan'))(SH.rf||SH.fn)($('#pan'))}
+function row(f){const[t,k,l,ty,a,b,s,u]=f,v=E[k];
+  if(ty==='b')return `<div class="st"><div class="h">${l}<input class="tg" type="checkbox" data-k="${k}" ${v!==false&&v?'checked':''}></div></div>`;
+  if(ty==='s')return `<div class="st"><div class="h">${l}</div><div class="seg">${a.map(o=>`<button data-k="${k}" data-v="${o[0]}" class="${String(v)===o[0]?'on':''}">${o[1]}</button>`).join('')}</div></div>`;
+  return `<div class="st"><div class="h">${l}<span class="v" id="v_${k}">${v}${u}</span></div><input type="range" data-k="${k}" data-u="${u}" min="${a}" max="${b}" step="${s}" value="${v}"></div>`}
+function openSettings(tab){openSheet(false,el=>{
+  let ex='';
+  if(tab===1)ex=`<div class="st"><div class="h">Centre : ${E.lat===''?'à placer sur la carte':(+E.lat).toFixed(4)+', '+(+E.lng).toFixed(4)}</div><button class="sm" id="here">📍 Centre = ma position</button>${E.shape==='polygon'?'<button class="sm" id="pu">↩ Retirer un point</button><button class="sm" id="pc">Tout effacer</button> <span class="mu">'+E.poly.length+' sommet(s)</span>':''}<p class="mu">Ferme ce panneau puis touche la carte pour placer le centre (ou les sommets du polygone).</p></div><div class="h" style="font-size:13px;font-weight:700;letter-spacing:.06em">CALCULÉ</div><div class="calc">${calc(E)}</div>`;
+  el.innerHTML=`<div class="tabs">${['🎚','🗺','🎮','💲'].map((t,i)=>`<button data-tab="${i}" class="${i===tab?'on':''}">${t}</button>`).join('')}</div><h2>${['Config & gameplay','Zone','Jeu & alertes','Économie & boutique'][tab]}</h2>${F.filter(f=>f[0]===tab).map(row).join('')}${ex}`;
+  el.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>openSettings(+b.dataset.tab));
+  el.querySelectorAll('input[data-k]').forEach(i=>i.oninput=()=>{const k=i.dataset.k;E[k]=i.type==='checkbox'?i.checked:+i.value;const v=$('#v_'+k);if(v)v.textContent=E[k]+i.dataset.u;const cl=el.querySelector('.calc');if(cl)cl.textContent=calc(E);save();update()});
+  el.querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>{E[b.dataset.k]=b.dataset.v;save();update();openSettings(tab)});
+  const h=$('#here');if(h)h.onclick=()=>{if(!myPos)return toast('Position indisponible : autorise la localisation.');E.lat=+myPos.lat.toFixed(6);E.lng=+myPos.lng.toFixed(6);save();update();openSettings(tab)};
+  if($('#pu'))$('#pu').onclick=()=>{E.poly.pop();save();update();openSettings(tab)};
+  if($('#pc'))$('#pc').onclick=()=>{E.poly=[];save();update();openSettings(tab)};
+})}
+function openShop(){openSheet(true,el=>{
+  const me=P[uid]||{},h=me.team==='hunter';
+  el.innerHTML=`<div class="top2"><div><h2>${h?'Boutique d’objets':'Boutique des cachés'}</h2><span class="mu">${h?'Obtenez des bonus et objets':'Dépassez les chasseurs'}</span></div><span class="coin">💲 ${me.money||0}</span></div><div class="grid">${IT[h?'hunter':'prey'].map(i=>`<button class="it ${(me.money||0)<i[3]?'no':''}" data-b="${i[0]}"><div class="ic">${i[4]}</div><h4>${i[1]}</h4><p>${i[2]}</p><span class="pr">💲 ${i[3]}</span></button>`).join('')}</div>`;
+  el.querySelectorAll('[data-b]').forEach(b=>b.onclick=()=>buy(b.dataset.b))})}
+function chatList(){const l=$('#cl');if(!l)return;const me=P[uid]||{};
+  l.innerHTML=CH.filter(m=>chatTo==='all'?m.to==='all':m.to==='team'&&m.team===me.team).map(m=>`<div class="msg ${m.u===uid?'me':''}"><b>${esc(m.name||'?')}</b>${esc(m.text)}</div>`).join('')||'<p class="mu">Aucun message.</p>';
+  l.scrollTop=l.scrollHeight;
+  document.querySelectorAll('[data-to]').forEach(b=>b.className=b.dataset.to===chatTo?'on':'')}
+function openChat(){chatTo='all';openSheet(true,el=>{
+  el.innerHTML=`<div class="seg"><button data-to="all">Tous</button><button data-to="team">Mon équipe</button></div><div class="cl" id="cl"></div><div style="display:flex;gap:8px"><input id="ci" placeholder="Message" maxlength="200"><button class="fill" id="cs2">Envoyer</button></div>`;
+  el.querySelectorAll('[data-to]').forEach(b=>b.onclick=()=>{chatTo=b.dataset.to;chatList()});
+  const send=()=>{const t=$('#ci').value.trim(),me=P[uid]||{};if(!t)return;if(chatTo==='team'&&!me.team)return toast('Choisis d’abord une équipe');
+    db.collection(`games/${code}/chat`).add({u:uid,name,team:me.team||'',to:chatTo,text:t,ts:Date.now()});$('#ci').value=''};
+  $('#cs2').onclick=send;$('#ci').onkeydown=e=>{if(e.key==='Enter')send()};chatList()},chatList)}
+function openPlayers(){openSheet(true,el=>{
+  const adm=isAdmin(),ids=Object.keys(P).sort((a,b)=>(P[a].name||'').localeCompare(P[b].name||'')),T={hunter:'Zombie',prey:'Survivant','':'Sans équipe'};
+  el.innerHTML=`<h2>Joueurs</h2>`+ids.map(id=>{const p=P[id];return `<div class="prow"><b>${esc(p.name||'?')}${id===G.adminId?' 👑':''}${id===uid?' (moi)':''}</b><span class="tag">${T[p.team||'']}</span>${p.caught?'<span class="tag">capturé</span>':''}${adm&&G.status!=='ended'?`<select data-t="${id}"><option value="">Sans équipe</option><option value="hunter">Zombie</option><option value="prey">Survivant</option></select>`:''}</div>`}).join('');
+  el.querySelectorAll('select[data-t]').forEach(s=>{s.value=P[s.dataset.t].team||'';s.onchange=()=>db.doc(`games/${code}/players/${s.dataset.t}`).update({team:s.value,caught:false})})})}
 init();
 </script></body></html>
