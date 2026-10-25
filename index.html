@@ -67,6 +67,27 @@ input[type=range]{width:100%;accent-color:var(--hl);margin-top:8px}
 .tag{font-size:12px;padding:2px 8px;border-radius:99px;background:var(--gs);color:var(--hl)}
 .warn{background:#d33;color:#fff;border-color:#d33}.okb{background:var(--hl);color:var(--on)}
 #ts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 150px);z-index:1000;background:#111;color:#fff;padding:10px 16px;border-radius:14px;font-weight:600;display:none;max-width:90%;text-align:center}
+.logo{width:120px;height:120px;border-radius:50%;background:#000;color:#00e676;display:grid;place-items:center;font-size:56px;margin:20px auto 10px;box-shadow:0 0 40px #00e67633}
+.home h1{text-align:center;letter-spacing:.3em;font-size:24px;color:var(--fg)}.sub{text-align:center;letter-spacing:.2em}
+.fld{border:1px solid var(--bd);border-radius:18px;margin:16px 0;padding:2px 12px 8px;display:flex;align-items:center;gap:8px;background:var(--cd)}.fld legend{font-size:12px;font-weight:700;letter-spacing:.14em;color:var(--hl);padding:0 6px}
+.fld input{border:0!important;background:transparent!important;font:600 20px ui-monospace,monospace!important;margin:0!important}
+.big{width:100%;border-radius:18px!important;padding:16px!important;margin:6px 0;font-size:17px!important;letter-spacing:.14em}.big small,.go small{display:block;font-weight:400;font-size:13px;letter-spacing:.05em;opacity:.8}
+.big.g{background:var(--gs)!important;color:var(--hl)!important;border:2px solid var(--hl)!important}.big.r{background:#d00!important;color:#fff!important}
+.mini{padding:6px 10px!important;border-radius:10px!important;background:transparent!important;color:var(--fg)!important;border:0!important;font-size:18px}
+.nb{width:84px;text-align:right;background:var(--cd);color:var(--hl);border:1px solid var(--bd);border-radius:8px;padding:4px 6px;font:600 17px ui-monospace,monospace;margin-right:2px}
+#lob{position:fixed;inset:0;z-index:700;background:var(--bg);overflow:auto}
+.lw{max-width:560px;margin:auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px 24px;display:flex;flex-direction:column;gap:14px}
+.lh{display:flex;align-items:center;gap:10px}.lid{font:700 38px ui-monospace,monospace;letter-spacing:.05em}
+.vs{display:flex;justify-content:space-around;align-items:center;background:var(--cd);border:1px solid var(--bd);border-radius:22px;padding:18px;text-align:center;font-size:13px;letter-spacing:.08em}.vs b{font:700 34px ui-monospace,monospace}
+.wide{background:var(--cd);color:var(--fg);border:1px solid var(--bd);border-radius:18px;padding:14px;font-weight:700;letter-spacing:.08em}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.pl{padding:12px;border-radius:14px;margin-bottom:8px;font-weight:700}.pl.h{background:#f8dada;color:#a00;border-left:4px solid #c00}.pl.p{background:#d7efe3;color:#075;border-left:4px solid #0a7}
+.jn{width:100%;padding:16px;border-radius:16px;font-weight:800;letter-spacing:.08em;background:transparent;border:2px solid}.jn.h{color:#c00;border-color:#c00}.jn.p{color:#0a7;border-color:#0a7}.jn.on.h{background:#f8dada}.jn.on.p{background:#d7efe3}
+.go{width:100%;border:0;border-radius:18px;padding:16px;background:#d00;color:#fff;font-weight:800;font-size:18px;letter-spacing:.08em}.go:disabled{background:var(--cd);color:var(--mu);border:1px solid var(--bd)}
+.wait{text-align:center;color:var(--mu);font-weight:800;letter-spacing:.1em;padding:16px;border:1px solid var(--bd);border-radius:18px}
+#zb{position:fixed;left:0;right:0;top:0;z-index:800;background:var(--bg);padding:calc(env(safe-area-inset-top,0px) + 10px) 14px 6px;border-bottom:1px solid var(--bd)}.zt{display:flex;gap:12px;align-items:center;font-size:20px;margin-bottom:6px}
+#zc{position:fixed;left:0;right:0;bottom:0;z-index:800;background:var(--bg);padding:12px 14px calc(env(safe-area-inset-bottom,0px) + 12px);border-top:1px solid var(--bd);display:flex;gap:10px;align-items:center}#zc .go{flex:1}
+.zm .hud,.zm .chat,.zm .cnt,.zm .bar{display:none}
 </style></head><body><div id="app"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -84,7 +105,7 @@ const FIREBASE_CONFIG = {
 const $=s=>document.querySelector(s),app=$('#app');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const inc=n=>firebase.firestore.FieldValue.increment(n);
-let db,uid,code,G=null,P={},CH=[],unsubs=[],wid,lastSent=0,myPos=null,shown='',ending=false,tm,map,tile,layer,view='',bg=true,ready=false,name='',E={},SH=null,pubIdx=-1,earnAt=0,lastBuy=0,outAt=0,outDone=false,scanC=null,svT,barK='',chatTo='all',wl;
+let db,uid,code,G=null,P={},CH=[],unsubs=[],wid,lastSent=0,myPos=null,shown='',ending=false,tm,map,tile,layer,view='',bg=true,ready=false,name='',E={},SH=null,pubIdx=-1,earnAt=0,lastBuy=0,outAt=0,outDone=false,scanC=null,svT,barK='',chatTo='all',wl,zoneMode=false,lobbyKey='';
 try{name=localStorage.getItem('mh_name')||''}catch(e){}
 const D={wait:30,capType:'pin',capDist:20,convert:true,teamMode:'choose',shape:'circle',diam:500,durMin:59,phases:4,endDiam:50,lastTime:300,trans:20,move:'fixed',pings:true,pingMin:2,first:false,named:false,pingAll:'all',pingShow:0,outTime:20,outPing:false,eco:true,shop:true,cpm:10,ccap:50,cdPrey:120,cdHunt:0,lat:'',lng:'',poly:[]};
 const cfg=()=>Object.assign({},D,(G&&G.cfg)||{});
@@ -145,18 +166,24 @@ function init(){
   if(!uid){uid=Math.random().toString(36).slice(2)+Date.now().toString(36);try{localStorage.setItem('mh_uid',uid)}catch(e){}}
   home();
 }
+async function purge(c){for(const k of ['players','chat']){const q=await db.collection(`games/${c}/${k}`).get();const b=db.batch();q.docs.forEach(d=>b.delete(d.ref));await b.commit()}}
 function home(err){
-  cleanup();document.body.className='';
-  app.innerHTML=`<div class="home"><h1>🎯 Chasse à l’homme</h1>
-  <div class="cdd"><label>Ton pseudo<input id="nm" maxlength="20" value="${esc(name)}"></label></div>
-  <div class="cdd"><h3>Rejoindre une partie</h3><input id="cd" placeholder="Identifiant de partie" maxlength="8" style="text-transform:uppercase"><button id="jn">Rejoindre</button></div>
-  <div class="cdd"><h3>Organiser</h3><p class="mu">Tu seras l’admin : tu règles la partie et tu la lances.</p><button id="mk">Créer une partie</button></div>
-  <p class="er" id="er">${err||''}</p></div>`;
+  cleanup();document.body.className='';app.className='';
+  let lid='';try{lid=localStorage.getItem('mh_id')||''}catch(e){}
+  app.innerHTML=`<div class="home"><div class="logo">◎</div><h1>CHASSE À L’HOMME</h1><p class="mu sub">CACHE-CACHE GPS EN ZONE</p>
+  <fieldset class="fld"><legend>TON NOM</legend><input id="nm" maxlength="20" value="${esc(name)}"></fieldset>
+  <fieldset class="fld"><legend>ID DE ZONE</legend><input id="cd" maxlength="8" placeholder="Choisis-le" style="text-transform:uppercase" value="${esc(lid)}"><button class="mini" id="rnd">🔀</button></fieldset>
+  <button class="big g" id="jn">REJOINDRE LA ZONE<small>JOUEUR</small></button><button class="big r" id="mk">CRÉER UNE ZONE<small>HÔTE</small></button><p class="er" id="er">${err||''}</p></div>`;
+  const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789',rid=()=>{let c='';for(let i=0;i<5;i++)c+=A[Math.floor(Math.random()*A.length)];return c};
   const nm=()=>{name=$('#nm').value.trim();if(!name){$('#er').textContent='Choisis un pseudo.';return false}try{localStorage.setItem('mh_name',name)}catch(e){}return true};
-  $('#jn').onclick=async()=>{if(!nm())return;const c=$('#cd').value.trim().toUpperCase();if(!c)return;
+  const gid=()=>{const c=$('#cd').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');try{localStorage.setItem('mh_id',c)}catch(e){}return c};
+  const bad=c=>{if(c.length<3){$('#er').textContent='L’ID doit faire au moins 3 caractères.';return true}return false};
+  $('#rnd').onclick=()=>{$('#cd').value=rid()};
+  $('#jn').onclick=async()=>{if(!nm())return;const c=gid();if(bad(c))return;
     try{const s=await db.doc('games/'+c).get();if(!s.exists){$('#er').textContent='Partie introuvable.';return}enter(c)}catch(e){$('#er').textContent='Erreur : '+(e.message||e.code)}};
-  $('#mk').onclick=async()=>{if(!nm())return;const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789';let c='';for(let i=0;i<5;i++)c+=A[Math.floor(Math.random()*A.length)];
-    try{await db.doc('games/'+c).set({adminId:uid,status:'lobby',cfg:D,created:Date.now()});enter(c)}catch(e){$('#er').textContent='Création impossible : '+(e.message||e.code)}};
+  $('#mk').onclick=async()=>{if(!nm())return;let c=gid();if(!c){c=rid();$('#cd').value=c}if(bad(c))return;
+    try{const s=await db.doc('games/'+c).get();if(s.exists){if(s.data().status!=='ended'){$('#er').textContent='Cet ID est déjà utilisé : choisis-en un autre.';return}await purge(c)}
+      await db.doc('games/'+c).set({adminId:uid,status:'lobby',cfg:D,created:Date.now()});enter(c)}catch(e){$('#er').textContent='Création impossible : '+(e.message||e.code)}};
 }
 function cleanup(){unsubs.forEach(f=>f());unsubs=[];clearInterval(tm);if(wid!=null&&navigator.geolocation)navigator.geolocation.clearWatch(wid);wid=null;if(map){map.remove();map=null}if(wl){wl.release().catch(()=>{});wl=null}
   G=null;P={};CH=[];shown='';ending=false;ready=false;pubIdx=-1;earnAt=0;lastBuy=0;outAt=0;outDone=false;scanC=null;barK='';SH=null;code=null}
@@ -243,12 +270,13 @@ function build(){
   $('#ctr').onclick=()=>{if(myPos)map.setView([myPos.lat,myPos.lng],Math.max(map.getZoom(),17));else toast('Position indisponible : autorise la localisation.')};
   $('#bgb').onclick=()=>{bg=!bg;bg?tile.addTo(map):map.removeLayer(tile)};
   $('#chb').onclick=openChat;
+  app.className='';zoneMode=false;lobbyKey='';
 }
 function save(){clearTimeout(svT);svT=setTimeout(()=>db.doc('games/'+code).update({cfg:E}).catch(()=>{}),400)}
 function finish(w){if(ending)return;ending=true;db.doc('games/'+code).update({status:'ended',endedAt:Date.now(),winner:w}).catch(()=>{ending=false})}
 async function start(){
   await db.doc('games/'+code).update({cfg:E});const c=E;
-  if(c.shape==='polygon'?(c.poly||[]).length<3:(c.lat===''||c.lng==='')){alert('Définis d’abord la zone : ouvre ⚙️ puis touche la carte.');return}
+  if(c.shape==='polygon'?(c.poly||[]).length<3:(c.lat===''||c.lng==='')){alert('Définis d’abord la zone (bouton « Définir la zone »).');return}
   const pp=Object.values(P);if(!pp.some(p=>p.team==='hunter')||!pp.some(p=>p.team==='prey')){alert('Il faut au moins un zombie et un survivant.');return}
   let en=null;if(c.shape!=='polygon'&&mv(c)){const R=Math.max(0,c.diam/2-Math.min(c.endDiam,c.diam)/2),a=Math.random()*6.2832,d=Math.sqrt(Math.random())*R;en={lat:c.lat+d*Math.sin(a)/110540,lng:c.lng+d*Math.cos(a)/(111320*Math.cos(c.lat*Math.PI/180))}}
   db.doc('games/'+code).update({status:'running',startedAt:Date.now(),endC:en})}
@@ -306,7 +334,7 @@ function update(){
   if(run&&me.caught)msg='Tu as été capturé : spectateur.';
   else if(run&&me.wasCaught&&me.team==='hunter'&&!msg){msg='Capturé : tu es maintenant zombie !';cls='okb'}
   const b=$('#bn');b.style.display=msg?'block':'none';b.textContent=msg;b.className='pill '+cls;
-  bar(me);draw(c,Z,run,adm,me);
+  bar(me);lobbyUI(me);draw(c,Z,run,adm,me);
 }
 function draw(c,Z,run,adm,me){
   if(!map)return;layer.clearLayers();
@@ -328,8 +356,9 @@ function draw(c,Z,run,adm,me){
   Object.keys(P).forEach(id=>{const p=P[id];if(id===uid||!p.team||p.caught)return;
     const pubOk=p.pub&&(c.pingShow===0||Date.now()-p.pub.at<c.pingShow*1000);
     if(adm)dot(p,p.team==='hunter'?H_:P_,p.name||'?');
-    else if(me.team==='hunter'){if(p.team==='hunter')dot(p,H_,p.name||'?');else if(run&&rev)dot(p,P_,p.name||'?');else if(run&&pubOk)dot(p.pub,P_,nm(p)+' ('+fmt(Date.now()-p.pub.at)+')')}
-    else if(me.team==='prey'){if(p.team==='prey')dot(p,P_,p.name||'?');else if(run&&pubOk)dot(p.pub,H_,nm(p)+' ('+fmt(Date.now()-p.pub.at)+')')}});
+    else if(me.team==='hunter'&&p.team==='hunter')dot(p,H_,p.name||'?');
+    else if(run&&me.team==='hunter'&&rev&&p.team==='prey')dot(p,P_,p.name||'?');
+    else if(run&&me.team&&pubOk)dot(p.pub,p.team==='hunter'?H_:P_,nm(p)+' ('+fmt(Date.now()-p.pub.at)+')')});
   if(scanC&&Date.now()<scanC.until)L.circle([scanC.lat,scanC.lng],{radius:50,color:'#7dff1a',weight:2,fillOpacity:.08}).addTo(layer);
   if(myPos&&me.team)dot(myPos,'#3b82f6','Moi',true);
 }
@@ -340,13 +369,13 @@ function liveRefresh(){if(SH&&SH.live&&$('#pan'))(SH.rf||SH.fn)($('#pan'))}
 function row(f){const[t,k,l,ty,a,b,s,u]=f,v=E[k];
   if(ty==='b')return `<div class="st"><div class="h">${l}<input class="tg" type="checkbox" data-k="${k}" ${v!==false&&v?'checked':''}></div></div>`;
   if(ty==='s')return `<div class="st"><div class="h">${l}</div><div class="seg">${a.map(o=>`<button data-k="${k}" data-v="${o[0]}" class="${String(v)===o[0]?'on':''}">${o[1]}</button>`).join('')}</div></div>`;
-  return `<div class="st"><div class="h">${l}<span class="v" id="v_${k}">${v}${u}</span></div><input type="range" data-k="${k}" data-u="${u}" min="${a}" max="${b}" step="${s}" value="${v}"></div>`}
+  return `<div class="st"><div class="h">${l}<span class="v"><input type="number" class="nb" data-k="${k}" step="${s}" value="${v}">${u}</span></div><input type="range" data-k="${k}" data-u="${u}" min="${a}" max="${b}" step="${s}" value="${v}"></div>`}
 function openSettings(tab){openSheet(false,el=>{
   let ex='';
-  if(tab===1)ex=`<div class="st"><div class="h">Centre : ${E.lat===''?'à placer sur la carte':(+E.lat).toFixed(4)+', '+(+E.lng).toFixed(4)}</div><button class="sm" id="here">📍 Centre = ma position</button>${E.shape==='polygon'?'<button class="sm" id="pu">↩ Retirer un point</button><button class="sm" id="pc">Tout effacer</button> <span class="mu">'+E.poly.length+' sommet(s)</span>':''}<p class="mu">Ferme ce panneau puis touche la carte pour placer le centre (ou les sommets du polygone).</p></div><div class="h" style="font-size:13px;font-weight:700;letter-spacing:.06em">CALCULÉ</div><div class="calc">${calc(E)}</div>`;
+  if(tab===1)ex=`<div class="st"><div class="h">Centre : ${E.lat===''?'à placer sur la carte':(+E.lat).toFixed(4)+', '+(+E.lng).toFixed(4)}</div><button class="sm" id="here">📍 Centre = ma position</button>${E.shape==='polygon'?'<button class="sm" id="pu">↩ Retirer un point</button><button class="sm" id="pc">Tout effacer</button> <span class="mu">'+E.poly.length+' sommet(s)</span>':''}<p class="mu">Utilise « Définir la zone » dans le salon pour placer le centre ou les sommets.</p></div><div class="h" style="font-size:13px;font-weight:700;letter-spacing:.06em">CALCULÉ</div><div class="calc">${calc(E)}</div>`;
   el.innerHTML=`<div class="tabs">${['🎚','🗺','🎮','💲'].map((t,i)=>`<button data-tab="${i}" class="${i===tab?'on':''}">${t}</button>`).join('')}</div><h2>${['Config & gameplay','Zone','Jeu & alertes','Économie & boutique'][tab]}</h2>${F.filter(f=>f[0]===tab).map(row).join('')}${ex}`;
   el.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>openSettings(+b.dataset.tab));
-  el.querySelectorAll('input[data-k]').forEach(i=>i.oninput=()=>{const k=i.dataset.k;E[k]=i.type==='checkbox'?i.checked:+i.value;const v=$('#v_'+k);if(v)v.textContent=E[k]+i.dataset.u;const cl=el.querySelector('.calc');if(cl)cl.textContent=calc(E);save();update()});
+  el.querySelectorAll('input[data-k]').forEach(i=>i.oninput=()=>{const k=i.dataset.k;if(i.type!=='checkbox'&&i.value==='')return;E[k]=i.type==='checkbox'?i.checked:+i.value;el.querySelectorAll('input[data-k="'+k+'"]').forEach(x=>{if(x!==i&&x.type!=='checkbox')x.value=E[k]});const cl=el.querySelector('.calc');if(cl)cl.textContent=calc(E);save();update()});
   el.querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>{E[b.dataset.k]=b.dataset.v;save();update();openSettings(tab)});
   const h=$('#here');if(h)h.onclick=()=>{if(!myPos)return toast('Position indisponible : autorise la localisation.');E.lat=+myPos.lat.toFixed(6);E.lng=+myPos.lng.toFixed(6);save();update();openSettings(tab)};
   if($('#pu'))$('#pu').onclick=()=>{E.poly.pop();save();update();openSettings(tab)};
@@ -370,5 +399,44 @@ function openPlayers(){openSheet(true,el=>{
   const adm=isAdmin(),ids=Object.keys(P).sort((a,b)=>(P[a].name||'').localeCompare(P[b].name||'')),T={hunter:'Zombie',prey:'Survivant','':'Sans équipe'};
   el.innerHTML=`<h2>Joueurs</h2>`+ids.map(id=>{const p=P[id];return `<div class="prow"><b>${esc(p.name||'?')}${id===G.adminId?' 👑':''}${id===uid?' (moi)':''}</b><span class="tag">${T[p.team||'']}</span>${p.caught?'<span class="tag">capturé</span>':''}${adm&&G.status!=='ended'?`<select data-t="${id}"><option value="">Sans équipe</option><option value="hunter">Zombie</option><option value="prey">Survivant</option></select>`:''}</div>`}).join('');
   el.querySelectorAll('select[data-t]').forEach(s=>{s.value=P[s.dataset.t].team||'';s.onchange=()=>db.doc(`games/${code}/players/${s.dataset.t}`).update({team:s.value,caught:false})})})}
+function lobbyUI(me){
+  let L=$('#lob');
+  if(G.status!=='lobby'){if(L)L.remove();return}
+  if(!L){L=document.createElement('div');L.id='lob';app.appendChild(L)}
+  L.style.display=zoneMode?'none':'block';
+  const ids=Object.keys(P),k=[ids.map(i=>i+P[i].team+P[i].name).join(),isAdmin(),C().teamMode,zoneMode].join('|');
+  if(k===lobbyKey)return;lobbyKey=k;
+  const H=ids.filter(i=>P[i].team==='hunter'),R=ids.filter(i=>P[i].team==='prey'),U=ids.filter(i=>!P[i].team),adm=isAdmin(),ch=adm||C().teamMode==='choose',ok=H.length&&R.length;
+  const col=a=>a.map(i=>`<div class="pl ${a===H?'h':'p'}">${esc(P[i].name||'?')}${i===G.adminId?' 👑':''}</div>`).join('')||'<div class="mu" style="text-align:center;padding:30px 0">Aucun joueur</div>';
+  const jb=(t,l)=>ch?`<button class="jn ${t==='hunter'?'h':'p'} ${me.team===t?'on':''}" data-m="${t}">${me.team===t?'REJOINT':'REJOINDRE'}</button>`:'';
+  L.innerHTML=`<div class="lw"><div class="lh"><button class="fab" id="lb">←</button><div style="flex:1"><div class="mu">ZONE</div><div class="lid">${esc(code)} <button class="mini" id="cp">⧉</button></div></div><button class="fab" id="shr">⎘</button>${adm?'<button class="fab" id="st">🎚</button>':''}</div>
+  <div class="vs"><div><b style="color:#c00">${H.length}</b><br>CHASSEURS</div><span>VS</span><div><b style="color:#0a7">${R.length}</b><br>CACHÉS</div></div>
+  ${adm?'<button class="wide" id="rt">🔀 ÉQUIPES ALÉATOIRES</button><button class="wide" id="dz">🗺 DÉFINIR LA ZONE</button>':''}
+  <div class="cols"><div>${col(H)}${jb('hunter')}</div><div>${col(R)}${jb('prey')}</div></div>
+  ${U.length?`<p class="mu">Sans équipe : ${U.map(i=>esc(P[i].name||'?')).join(', ')}</p>`:''}
+  ${adm?`<button class="go" id="go2" ${ok?'':'disabled'}>▶ LANCER LA PARTIE${ok?'':'<small>Il faut 1+ chasseur et 1+ caché</small>'}</button>`:'<div class="wait">EN ATTENTE DE L’ADMIN</div>'}</div>`;
+  const b=s=>$(s);
+  b('#lb').onclick=()=>{if(confirm('Quitter la partie ?'))home()};
+  b('#cp').onclick=()=>{try{navigator.clipboard.writeText(code)}catch(e){}toast('Identifiant copié')};
+  b('#shr').onclick=()=>{const d={title:'Chasse à l’homme',text:'Rejoins ma partie, ID : '+code,url:location.href.split('#')[0]};if(navigator.share)navigator.share(d).catch(()=>{});else{try{navigator.clipboard.writeText(d.text)}catch(e){}toast('Message copié')}};
+  if(b('#st'))b('#st').onclick=()=>openSettings(0);
+  if(b('#rt'))b('#rt').onclick=openRandom;
+  if(b('#dz'))b('#dz').onclick=enterZone;
+  if(b('#go2'))b('#go2').onclick=start;
+  L.querySelectorAll('[data-m]').forEach(x=>x.onclick=()=>db.doc(`games/${code}/players/${uid}`).update({team:x.dataset.m}))}
+function enterZone(){
+  zoneMode=true;app.className='zm';lobbyKey='';
+  const d=document.createElement('div');d.id='zb';d.innerHTML='<div class="zt"><button class="fab" id="zx">✕</button><b>Définir la zone de départ</b></div><p class="mu" style="margin:0 0 6px">Touche la carte pour placer le centre de la zone (ou les sommets du polygone).</p>';
+  const f=document.createElement('div');f.id='zc';f.innerHTML='<button class="sm" id="zp">📍 Ma position</button><button class="go" id="zok">Confirmer</button>';
+  app.appendChild(d);app.appendChild(f);
+  const out=()=>{zoneMode=false;app.className='';d.remove();f.remove();lobbyKey='';update()};
+  $('#zx').onclick=out;
+  $('#zok').onclick=()=>{if(E.shape==='polygon'?E.poly.length<3:E.lat==='')return toast('Place d’abord la zone');out()};
+  $('#zp').onclick=()=>{if(!myPos)return toast('Position indisponible : autorise la localisation.');E.lat=+myPos.lat.toFixed(6);E.lng=+myPos.lng.toFixed(6);save();view='';update();map.setView([myPos.lat,myPos.lng],16)}}
+function openRandom(){openSheet(false,el=>{
+  const n=Object.keys(P).length,h=Math.max(1,Math.round(n/4));
+  el.innerHTML=`<h2>Équipes aléatoires</h2><div class="st"><div class="h">Chasseurs<input type="number" class="nb" id="rh" min="0" value="${h}"></div></div><div class="st"><div class="h">Cachés<input type="number" class="nb" id="rp" min="0" value="${Math.max(0,n-h)}"></div></div><p class="mu">${n} joueur(s) dans le salon. Les joueurs en trop restent sans équipe.</p><button class="go" id="rg">Tirer au sort</button>`;
+  $('#rg').onclick=async()=>{const h=+$('#rh').value||0,p=+$('#rp').value||0,ids=Object.keys(P).sort(()=>Math.random()-.5);
+    await Promise.all(ids.map((id,i)=>db.doc(`games/${code}/players/${id}`).update({team:i<h?'hunter':i<h+p?'prey':'',caught:false})));closeSheet();toast('Équipes tirées au sort')}})}
 init();
 </script></body></html>
